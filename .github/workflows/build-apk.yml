@@ -11,61 +11,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Bubblewrap
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Bubblewrap non-interactive
         run: npm install -g @bubblewrap/cli
 
-      - name: Create TWA config
+      - name: Generate TWA project
         run: |
-          mkdir twa-project
-          cat > twa-project/twa-manifest.json << 'EOF'
-          {
-            "packageId": "com.pawlog.app",
-            "host": "leishangthemlanchenba43-spec.github.io",
-            "startUrl": "/pawlog/",
-            "name": "PawLog",
-            "launcherName": "PawLog",
-            "display": "standalone",
-            "themeColor": "#0F6E56",
-            "backgroundColor": "#ffffff",
-            "enableNotifications": false,
-            "shortcuts": [],
-            "iconUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/icon-512.png",
-            "maskableIconUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/icon-512.png",
-            "appVersion": "1",
-            "appVersionCode": 1,
-            "signingKey": {
-              "path": "android.keystore",
-              "alias": "android"
-            },
-            "minSdkVersion": 21,
-            "targetSdkVersion": 34,
-            "orientation": "portrait",
-            "fullScopeUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/",
-            "webManifestUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/manifest.json"
-          }
-          EOF
-
-      - name: Build TWA
-        run: |
-          cd twa-project
-          echo "N" | bubblewrap build --skipPwaValidation
+          bubblewrap init \
+            --manifest https://leishangthemlanchenba43-spec.github.io/pawlog/manifest.json \
+            --directory twa-project \
+            --jdkPath $JAVA_HOME \
+            --androidSdkPath $ANDROID_SDK_ROOT
         env:
           BUBBLEWRAP_ACCEPT_OPTIONAL_DEPS: true
-          JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
+
+      - name: Build APK
+        run: |
+          cd twa-project
+          ./gradlew assembleRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: pawlog-apk
-          path: twa-project/*.apk
+          path: twa-project/app/build/outputs/apk/release/*.apk
