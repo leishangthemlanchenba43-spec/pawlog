@@ -16,7 +16,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '18'
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -24,46 +24,85 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Initialize TWA project
+      - name: Create TWA manifest
         run: |
-          mkdir twa-build && cd twa-build
-          bubblewrap init \
-            --manifest=https://leishangthemlanchenba43-spec.github.io/pawlog/manifest.json \
-            --directory=. \
-            --packageId=com.pawlog.catcare \
-            --name="PawLog" \
-            --launcherName="PawLog" \
-            --themeColor=#0F6E56 \
-            --backgroundColor=#F5F4F0 \
-            --startUrl="/" \
-            --iconUrl=https://leishangthemlanchenba43-spec.github.io/pawlog/icon-512.png \
-            --maskableIconUrl=https://leishangthemlanchenba43-spec.github.io/pawlog/icon-512.png \
-            --signingKeyPath=./android.keystore \
-            --signingKeyAlias=android \
-            --keyStorePassword=pawlog2024 \
-            --keyPassword=pawlog2024 \
-            --skipPwaValidation
+          mkdir -p twa-build
+          cat > twa-build/twa-manifest.json << 'MANIFEST'
+          {
+            "packageId": "com.pawlog.catcare",
+            "host": "leishangthemlanchenba43-spec.github.io",
+            "name": "PawLog",
+            "launcherName": "PawLog",
+            "display": "standalone",
+            "orientation": "portrait",
+            "themeColor": "#0F6E56",
+            "navigationColor": "#0F6E56",
+            "navigationColorDark": "#0F6E56",
+            "navigationDividerColor": "#0F6E56",
+            "navigationDividerColorDark": "#0F6E56",
+            "backgroundColor": "#F5F4F0",
+            "enableNotifications": false,
+            "startUrl": "/pawlog/",
+            "iconUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/icon-512.png",
+            "maskableIconUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/icon-512.png",
+            "monochromeIconUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/icon-192.png",
+            "shortcuts": [],
+            "generatorApp": "bubblewrap-cli",
+            "webManifestUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/manifest.json",
+            "isChromeOSOnly": false,
+            "isMetaQuest": false,
+            "fullScopeUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/",
+            "minSdkVersion": 19,
+            "appVersion": "1",
+            "appVersionName": "1.0.0",
+            "signingKey": {
+              "path": "./android.keystore",
+              "alias": "android"
+            },
+            "additionalTrustedOrigins": [],
+            "retainedBundles": [],
+            "features": {}
+          }
+          MANIFEST
 
-      - name: Build APK
+      - name: Generate signing key
+        run: |
+          cd twa-build
+          keytool -genkey -v \
+            -keystore android.keystore \
+            -alias android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass pawlog2024 \
+            -keypass pawlog2024 \
+            -dname "CN=PawLog, OU=Dev, O=PawLog, L=City, S=State, C=US"
+
+      - name: Build Android project
         run: |
           cd twa-build
           bubblewrap build \
-            --signingKeyPath=./android.keystore \
-            --signingKeyAlias=android \
-            --keyStorePassword=pawlog2024 \
-            --keyPassword=pawlog2024
+            --manifest ./twa-manifest.json \
+            --keystore ./android.keystore \
+            --keystoreAlias android \
+            --keystorePassword pawlog2024 \
+            --keyPassword pawlog2024
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: pawlog2024
+          BUBBLEWRAP_KEY_PASSWORD: pawlog2024
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: PawLog-Android
           path: |
             twa-build/app-release-signed.apk
             twa-build/app-release-bundle.aab
+          if-no-files-found: warn
           retention-days: 30
