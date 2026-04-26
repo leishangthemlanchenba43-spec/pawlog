@@ -22,26 +22,16 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Node and Bubblewrap
-        run: |
-          node --version
-          npm install -g @bubblewrap/cli@latest
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Configure Bubblewrap
+      - name: Install Bubblewrap and generate project
         run: |
-          mkdir -p ~/.bubblewrap
-          cat > ~/.bubblewrap/config.json << 'EOF'
-          {
-            "jdkPath": "/opt/hostedtoolcache/Java_Temurin-Distributions_jdk/17.0.11-9/x64",
-            "androidSdkPath": "/usr/local/lib/android/sdk"
-          }
-          EOF
-
-      - name: Create project files
-        run: |
-          mkdir -p twa-build
-          cd twa-build
-          cat > twa-manifest.json << 'EOF'
+          npm install -g @bubblewrap/cli
+          mkdir twa-build && cd twa-build
+          cat > twa-manifest.json << 'TWAMF'
           {
             "packageId": "com.pawlog.catcare",
             "host": "leishangthemlanchenba43-spec.github.io",
@@ -77,22 +67,33 @@ jobs:
             "retainedBundles": [],
             "features": {}
           }
-          EOF
+          TWAMF
+          bubblewrap update --manifest ./twa-manifest.json
+
+      - name: Generate keystore
+        run: |
+          cd twa-build
           keytool -genkey -v \
             -keystore android.keystore \
             -alias android \
             -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass pawlog2024 -keypass pawlog2024 \
             -dname "CN=PawLog,OU=Dev,O=PawLog,L=City,S=State,C=US"
-          echo "pawlog2024" | bubblewrap update --manifest ./twa-manifest.json
-          printf 'pawlog2024\npawlog2024\n' | bubblewrap build --manifest ./twa-manifest.json
+
+      - name: Build with Gradle directly
+        run: |
+          cd twa-build
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$PWD/android.keystore \
+            -Pandroid.injected.signing.store.password=pawlog2024 \
+            -Pandroid.injected.signing.key.alias=android \
+            -Pandroid.injected.signing.key.password=pawlog2024
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: PawLog-Android
-          path: |
-            twa-build/app-release-signed.apk
-            twa-build/app-release-bundle.aab
+          path: twa-build/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: warn
           retention-days: 30
