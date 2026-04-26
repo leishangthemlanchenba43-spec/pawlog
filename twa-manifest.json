@@ -1,0 +1,43 @@
+{
+  "packageId": "com.lanchenba.pawlog",
+  "host": "leishangthemlanchenba43-spec.github.io",
+  "name": "PawLog - Cat Care",
+  "launcherName": "PawLog",
+  "display": "standalone",
+  "themeColor": "#FF6B9D",
+  "themeColorDark": "#1a1a1a",
+  "navigationColor": "#FF6B9D",
+  "navigationColorDark": "#1a1a1a",
+  "navigationDividerColor": "#FF6B9D",
+  "navigationDividerColorDark": "#1a1a1a",
+  "backgroundColor": "#FFF5F8",
+  "enableNotifications": true,
+  "startUrl": "/pawlog/",
+  "iconUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/icon-512.png",
+  "maskableIconUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/icon-512.png",
+  "monochromeIconUrl": null,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {"enabled": false},
+    "playBilling": {"enabled": false}
+  },
+  "alphaDependencies": {"enabled": false},
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/",
+  "minSdkVersion": 23,
+  "orientation": "default",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "appVersionName": "1.0.0",
+  "appVersion": 1,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  }
+}
