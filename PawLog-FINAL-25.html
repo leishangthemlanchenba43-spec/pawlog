@@ -1,0 +1,3008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0F6E56">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PawLog">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="description" content="The all-in-one cat care tracker. Log meals, moods, vet visits, weight and more.">
+<title>PawLog — Cat Care Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #0F6E56;
+    --green-light: #E1F5EE;
+    --green-mid: #1D9E75;
+    --amber: #EF9F27;
+    --amber-light: #FAEEDA;
+    --coral: #D85A30;
+    --coral-light: #FAECE7;
+    --gray: #F7F6F3;
+    --gray2: #EEECEA;
+    --text: #1A1A18;
+    --text2: #6B6A65;
+    --text3: #A09F9A;
+    --white: #FFFFFF;
+    --card-r: 16px;
+    --font-display: 'DM Serif Display', serif;
+    --font-body: 'DM Sans', sans-serif;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; font-family: var(--font-body); background: var(--gray); color: var(--text); font-size: 15px; }
+  
+  /* APP SHELL */
+  #app { display: flex; flex-direction: column; height: 100vh; max-width: 430px; margin: 0 auto; background: var(--gray); position: relative; overflow: hidden; }
+  
+  /* SCREENS */
+  .screen { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .screen.active { display: flex; }
+  
+  /* SCROLL AREA */
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
+  .scroll::-webkit-scrollbar { display: none; }
+  
+  /* HEADER */
+  .top-bar { padding: 52px 20px 20px; background: var(--green); color: var(--white); position: relative; overflow: hidden; }
+  .top-bar::after { content: ''; position: absolute; right: -30px; top: -30px; width: 160px; height: 160px; border-radius: 50%; background: rgba(255,255,255,0.06); pointer-events: none; }
+  .greeting { font-size: 13px; opacity: 0.75; margin-bottom: 4px; }
+  .cat-name { font-family: var(--font-display); font-size: 28px; line-height: 1.1; }
+  .streak-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 4px 10px; font-size: 12px; margin-top: 10px; }
+  .streak-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); }
+  .cat-switcher { position: absolute; top: 52px; right: 20px; background: rgba(255,255,255,0.2); border: none; border-radius: 20px; padding: 6px 14px; font-size: 12px; color: var(--white); font-family: var(--font-body); cursor: pointer; }
+  
+  /* SECTION */
+  .section { padding: 0 16px; margin-top: 16px; }
+  .section-label { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px; }
+  
+  /* CARD */
+  .card { background: var(--white); border-radius: var(--card-r); padding: 14px 16px; }
+  .card + .card { margin-top: 10px; }
+  
+  /* LOG ROWS */
+  .log-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--gray2); }
+  .log-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .log-row:first-child { padding-top: 0; }
+  .log-left { display: flex; flex-direction: column; gap: 2px; }
+  .log-name { font-size: 14px; font-weight: 500; }
+  .log-sub { font-size: 12px; color: var(--text2); }
+  .badge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+  .badge-done { background: var(--green-light); color: var(--green); }
+  .badge-due { background: var(--amber-light); color: #854F0B; }
+  .badge-pending { background: var(--gray2); color: var(--text2); }
+  .badge-alert { background: var(--coral-light); color: var(--coral); }
+  
+  /* MOOD */
+  .mood-row { display: flex; gap: 8px; }
+  .mood-btn { flex: 1; border: 1.5px solid var(--gray2); border-radius: 12px; padding: 10px 4px; font-size: 22px; text-align: center; cursor: pointer; background: var(--white); transition: all 0.15s ease; }
+  .mood-btn.sel { background: var(--green-light); border-color: var(--green-mid); transform: scale(1.06); }
+  
+  /* STAT GRID */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { background: var(--white); border-radius: var(--card-r); padding: 14px 16px; }
+  .stat-val { font-family: var(--font-display); font-size: 26px; color: var(--text); }
+  .stat-unit { font-size: 13px; color: var(--text2); font-family: var(--font-body); }
+  .stat-label { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  
+  /* VET ROW */
+  .vet-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--gray2); }
+  .vet-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .vet-row:first-child { padding-top: 0; }
+  .vet-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--green-light); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .vet-icon.amber { background: var(--amber-light); }
+  .vet-info { flex: 1; }
+  .vet-name { font-size: 14px; font-weight: 500; }
+  .vet-date { font-size: 12px; color: var(--text2); margin-top: 1px; }
+  
+  /* FAB */
+  .fab { position: fixed; bottom: calc(68px + var(--safe-bottom)); right: 20px; width: 52px; height: 52px; border-radius: 50%; background: var(--green); border: none; color: var(--white); font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(15,110,86,0.35); z-index: 100; transition: transform 0.15s ease; }
+  .fab:active { transform: scale(0.93); }
+  
+  /* BOTTOM NAV */
+  .bottom-nav { display: flex; justify-content: space-around; padding: 10px 0 calc(10px + var(--safe-bottom)); background: var(--white); border-top: 1px solid var(--gray2); position: relative; z-index: 50; flex-shrink: 0; }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; color: var(--text3); cursor: pointer; padding: 4px 12px; border-radius: 10px; transition: color 0.15s; min-width: 56px; }
+  .nav-item.active { color: var(--green); }
+  .nav-item .ni { font-size: 20px; }
+  
+  /* WEIGHT SCREEN */
+  .weight-chart { height: 140px; width: 100%; position: relative; }
+  .chart-line { fill: none; stroke: var(--green-mid); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .chart-area { fill: url(#areaGrad); }
+  .chart-dot { fill: var(--white); stroke: var(--green-mid); stroke-width: 2.5; }
+  .chart-dot.latest { fill: var(--green-mid); }
+  .w-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--gray2); }
+  .w-row:last-child { border-bottom: none; }
+  .w-date { font-size: 13px; color: var(--text2); }
+  .w-val { font-size: 15px; font-weight: 600; color: var(--text); }
+  .w-delta { font-size: 12px; margin-left: 6px; }
+  .w-up { color: var(--coral); }
+  .w-down { color: var(--green-mid); }
+  
+  /* HISTORY SCREEN */
+  .hist-day { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; padding: 14px 0 6px; }
+  .hist-entry { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--gray2); }
+  .hist-icon { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+  .hist-icon.feed { background: var(--green-light); }
+  .hist-icon.mood { background: #EEF0FE; }
+  .hist-icon.vet { background: var(--coral-light); }
+  .hist-icon.weight { background: var(--amber-light); }
+  .hist-text { flex: 1; }
+  .hist-name { font-size: 14px; font-weight: 500; }
+  .hist-detail { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .hist-time { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  
+  /* VET SCREEN */
+  .vet-card-big { background: var(--white); border-radius: var(--card-r); padding: 16px; }
+  .vet-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .vet-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--green-light); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .vet-title { font-size: 15px; font-weight: 600; }
+  .vet-subtitle { font-size: 12px; color: var(--text2); }
+  .vet-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .vet-meta-item { background: var(--gray); border-radius: 10px; padding: 8px 10px; }
+  .vet-meta-label { font-size: 11px; color: var(--text3); margin-bottom: 2px; }
+  .vet-meta-val { font-size: 13px; font-weight: 600; }
+  
+  /* MODAL */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: none; align-items: flex-end; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--white); border-radius: 20px 20px 0 0; padding: 20px 20px calc(20px + var(--safe-bottom)); width: 100%; max-height: 80vh; overflow-y: auto; animation: slideUp 0.25s ease; }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-handle { width: 40px; height: 4px; background: var(--gray2); border-radius: 2px; margin: 0 auto 16px; }
+  .modal-title { font-family: var(--font-display); font-size: 22px; margin-bottom: 16px; }
+  .option-list { display: flex; flex-direction: column; gap: 8px; }
+  .option-btn { display: flex; align-items: center; gap: 12px; background: var(--gray); border: none; border-radius: 12px; padding: 14px 16px; cursor: pointer; font-family: var(--font-body); font-size: 14px; font-weight: 500; color: var(--text); width: 100%; transition: background 0.12s; }
+  .option-btn:active { background: var(--green-light); }
+  .option-icon { font-size: 20px; width: 28px; text-align: center; }
+  
+  /* ADD ENTRY FORM */
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
+  .form-input { width: 100%; background: var(--gray); border: 1.5px solid var(--gray2); border-radius: 10px; padding: 11px 14px; font-size: 15px; font-family: var(--font-body); color: var(--text); outline: none; transition: border-color 0.15s; }
+  .form-input:focus { border-color: var(--green-mid); }
+  select.form-input { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%23A09F9A' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+  .save-btn { width: 100%; background: var(--green); color: var(--white); border: none; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 600; font-family: var(--font-body); cursor: pointer; margin-top: 6px; transition: opacity 0.15s; }
+  .save-btn:active { opacity: 0.85; }
+  
+  /* SETTINGS SCREEN */
+  .settings-cat-header { display: flex; flex-direction: column; align-items: center; padding: 30px 20px 20px; }
+  .cat-photo-wrap { position: relative; cursor: pointer; display: inline-block; }
+  .cat-avatar { width: 80px; height: 80px; border-radius: 50%; background: var(--green-light); display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 12px; overflow: hidden; }
+  .cat-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .photo-edit-badge { position: absolute; bottom: 14px; right: -2px; background: var(--green); color: var(--white); width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; border: 2px solid var(--white); }
+  .home-cat-photo { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .home-cat-photo img { width: 100%; height: 100%; object-fit: cover; }
+  .cat-name-big { font-family: var(--font-display); font-size: 24px; }
+  .cat-breed { font-size: 13px; color: var(--text2); margin-top: 3px; }
+  .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--gray2); }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-label { font-size: 15px; }
+  .settings-val { font-size: 14px; color: var(--text2); }
+  .toggle { width: 44px; height: 26px; background: var(--gray2); border-radius: 13px; position: relative; cursor: pointer; transition: background 0.2s; }
+  .toggle.on { background: var(--green-mid); }
+  .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--white); transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+  .toggle.on::after { transform: translateX(18px); }
+  
+  /* TOAST */
+  .toast { position: fixed; bottom: calc(80px + var(--safe-bottom) + 10px); left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--white); padding: 10px 18px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; transition: all 0.25s ease; z-index: 300; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 14px; }
+  .empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+  /* GALLERY */
+  .gallery-thumb { width:100%; aspect-ratio:1; object-fit:cover; border-radius:6px; cursor:pointer; display:block; background:var(--gray2); }
+
+  /* CALENDAR */
+  .ev-card { background:var(--white);border-radius:var(--card-r);padding:14px 16px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start; }
+  .ev-icon-wrap { width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0; }
+  .ev-icon-vet { background:#FAECE7; }
+  .ev-icon-feed { background:#E1F5EE; }
+  .ev-icon-med { background:#EEF0FE; }
+  .ev-icon-groom { background:#FAEEDA; }
+  .ev-icon-other { background:var(--gray2); }
+  .ev-body { flex:1;min-width:0; }
+  .ev-title { font-size:15px;font-weight:500;color:var(--text); }
+  .ev-meta { font-size:12px;color:var(--text2);margin-top:3px; }
+  .ev-countdown { font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;margin-top:6px;display:inline-block; }
+  .ev-today { background:#E1F5EE;color:var(--green); }
+  .ev-soon { background:var(--amber-light);color:#854F0B; }
+  .ev-future { background:var(--gray2);color:var(--text2); }
+  .ev-past { background:var(--coral-light);color:var(--coral); }
+  .ev-actions { display:flex;gap:6px;margin-top:8px; }
+  .ev-btn { background:var(--gray);border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;font-family:var(--font-body);cursor:pointer;color:var(--text2); }
+  .ev-btn:active { background:var(--green-light);color:var(--green); }
+  .msg-bubble { max-width:78%;padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.5;word-break:break-word; }
+  .msg-me { background:var(--green);color:#fff;border-bottom-right-radius:4px;align-self:flex-end; }
+  .msg-them { background:var(--white);color:var(--text);border-bottom-left-radius:4px;align-self:flex-start;border:0.5px solid var(--gray2); }
+  .msg-time { font-size:10px;opacity:0.6;margin-top:3px; }
+  .msg-wrap-me { display:flex;flex-direction:column;align-items:flex-end; }
+  .msg-wrap-them { display:flex;flex-direction:column;align-items:flex-start; }
+  /* PREMIUM */
+  .lock-banner { background:linear-gradient(135deg,#0F6E56,#1D9E75);border-radius:var(--card-r);padding:16px;margin-bottom:12px;color:#fff;text-align:center; }
+  .lock-banner-title { font-family:var(--font-display);font-size:20px;margin-bottom:4px; }
+  .lock-banner-sub { font-size:13px;opacity:0.85;margin-bottom:12px; }
+  .unlock-btn { background:#fff;color:var(--green);border:none;border-radius:20px;padding:8px 20px;font-size:13px;font-weight:700;font-family:var(--font-body);cursor:pointer; }
+  .breed-photo { width:54px;height:54px;border-radius:14px;object-fit:cover;flex-shrink:0;background:var(--gray2); }
+  .breed-photo-placeholder { width:54px;height:54px;border-radius:14px;background:var(--gray2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px; }
+
+  /* SOCIAL */
+  .stab { background:var(--gray2);border:none;border-radius:20px;padding:7px 16px;font-size:13px;font-weight:600;font-family:var(--font-body);cursor:pointer;color:var(--text2);transition:all 0.15s; }
+  .active-stab { background:var(--green);color:#fff; }
+  .pal-card { background:var(--white);border-radius:var(--card-r);padding:14px 16px;margin-bottom:10px; }
+  .pal-header { display:flex;align-items:center;gap:12px;margin-bottom:10px; }
+  .pal-avatar { width:52px;height:52px;border-radius:50%;object-fit:cover;background:var(--gray2);flex-shrink:0; }
+  .pal-avatar-placeholder { width:52px;height:52px;border-radius:50%;background:var(--green-light);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px; }
+  .pal-name { font-size:16px;font-weight:500;color:var(--text); }
+  .pal-owner { font-size:12px;color:var(--text2);margin-top:2px; }
+  .pal-breed-tag { font-size:11px;background:var(--green-light);color:var(--green);padding:2px 8px;border-radius:20px;font-weight:600;display:inline-block;margin-top:4px; }
+  .pal-fact { font-size:13px;color:var(--text2);line-height:1.5;margin-top:8px;padding-top:8px;border-top:1px solid var(--gray2); }
+  .pal-actions { display:flex;gap:8px;margin-top:10px; }
+  .pal-action-btn { flex:1;background:var(--gray);border:none;border-radius:10px;padding:8px;font-size:12px;font-weight:600;font-family:var(--font-body);cursor:pointer;color:var(--text2);transition:background 0.15s; }
+  .pal-action-btn:active { background:var(--green-light);color:var(--green); }
+  .pal-action-btn.liked { background:var(--coral-light);color:var(--coral); }
+  .feed-post { background:var(--white);border-radius:var(--card-r);padding:14px 16px;margin-bottom:10px; }
+  .post-header { display:flex;align-items:center;gap:10px;margin-bottom:10px; }
+  .post-avatar { width:40px;height:40px;border-radius:50%;object-fit:cover;background:var(--gray2);flex-shrink:0; }
+  .post-avatar-placeholder { width:40px;height:40px;border-radius:50%;background:var(--green-light);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px; }
+  .post-cat-name { font-size:14px;font-weight:500; }
+  .post-time { font-size:11px;color:var(--text3); }
+  .post-content { font-size:14px;color:var(--text2);line-height:1.5;margin-bottom:10px; }
+  .post-img { width:100%;border-radius:10px;object-fit:cover;max-height:200px;display:block;margin-bottom:10px; }
+  .post-actions { display:flex;gap:16px; }
+  .post-btn { background:none;border:none;font-size:13px;font-weight:600;color:var(--text3);font-family:var(--font-body);cursor:pointer;padding:0; }
+  .post-btn.active { color:var(--coral); }
+
+  /* ENCYCLOPEDIA */
+  .breed-card { background:var(--white); border-radius:var(--card-r); padding:14px 16px; margin-bottom:10px; display:flex; align-items:center; gap:14px; cursor:pointer; transition:transform 0.12s; }
+  .breed-card:active { transform:scale(0.98); }
+  .breed-emoji { font-size:32px; width:54px; height:54px; background:var(--gray); border-radius:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .breed-name { font-size:15px; font-weight:500; color:var(--text); }
+  .breed-origin { font-size:12px; color:var(--text2); margin-top:2px; }
+  .breed-tags { display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; }
+  .breed-tag { font-size:10px; padding:2px 8px; border-radius:20px; background:var(--green-light); color:var(--green); font-weight:600; }
+  .breed-tag.amber { background:var(--amber-light); color:#854F0B; }
+  .breed-tag.coral { background:var(--coral-light); color:var(--coral); }
+  .detail-hero { background:var(--green); border-radius:var(--card-r); padding:22px 16px; margin-top:14px; text-align:center; color:#fff; }
+  .detail-hero-emoji { font-size:60px; margin-bottom:8px; }
+  .detail-hero-name { font-family:var(--font-display); font-size:26px; }
+  .detail-hero-sub { font-size:13px; opacity:0.8; margin-top:4px; }
+  .owner-badge-big { background:rgba(255,255,255,0.2); border:1.5px solid rgba(255,255,255,0.5); border-radius:20px; padding:6px 16px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-top:12px; }
+  .trait-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+  .trait-card { background:var(--white); border-radius:12px; padding:12px 14px; }
+  .trait-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+  .trait-bar-wrap { background:var(--gray2); border-radius:20px; height:6px; overflow:hidden; }
+  .trait-bar { background:var(--green-mid); height:6px; border-radius:20px; }
+  .trait-val { font-size:12px; font-weight:600; color:var(--text2); margin-top:4px; }
+  .fact-card { background:var(--white); border-radius:var(--card-r); padding:14px 16px; margin-top:10px; }
+  .fact-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--gray2); }
+  .fact-row:last-child { border-bottom:none; }
+  .fact-label { font-size:13px; color:var(--text2); }
+  .fact-val { font-size:13px; font-weight:500; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- HOME SCREEN -->
+  <div class="screen active" id="screen-home">
+    <div class="scroll">
+      <div class="top-bar">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+          <div class="home-cat-photo" id="home-cat-photo">🐱</div>
+          <div>
+            <div class="greeting" id="greeting-text">Good morning</div>
+            <div class="cat-name" id="home-cat-name">Mochi's Day</div>
+          </div>
+        </div>
+        <div class="streak-badge">
+          <div class="streak-dot"></div>
+          <span id="streak-label">0-day care streak</span>
+        </div>
+        <button class="cat-switcher" onclick="openSwitcher()">Switch cat ▾</button>
+      </div>
+
+      <div class="section">
+        <div class="section-label">Today's care</div>
+        <div class="card" id="care-list"></div>
+      </div>
+
+      <div class="section" style="margin-top:14px;">
+        <div class="section-label">How's <span id="mood-cat-name">Mochi</span> feeling?</div>
+        <div class="card">
+          <div class="mood-row" id="mood-row">
+            <div class="mood-btn sel" onclick="setMood(this,'Happy')">😄</div>
+            <div class="mood-btn" onclick="setMood(this,'Calm')">😐</div>
+            <div class="mood-btn" onclick="setMood(this,'Sleepy')">😴</div>
+            <div class="mood-btn" onclick="setMood(this,'Unwell')">😟</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" style="margin-top:14px;">
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-val" id="weight-stat">—<span class="stat-unit"> kg</span></div>
+            <div class="stat-label">Latest weight</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="vet-stat">—<span class="stat-unit"> days</span></div>
+            <div class="stat-label">Next vet visit</div>
+          </div>
+          <div class="stat-card" onclick="switchTab('weeklyrep')" style="cursor:pointer;">
+            <div class="stat-val" id="age-human-stat" style="font-size:22px;">—</div>
+            <div class="stat-label">Human years 🧑</div>
+          </div>
+          <div class="stat-card" onclick="switchTab('weeklyrep')" style="cursor:pointer;">
+            <div class="stat-val" id="weekly-score-stat" style="font-size:22px;">—</div>
+            <div class="stat-label">Care score 📊</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" style="margin-top:14px; margin-bottom:4px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div class="section-label" style="margin-bottom:0;">Upcoming</div>
+          <button onclick="switchTab('calendar')" style="background:none;border:none;font-size:12px;font-weight:600;color:var(--green);font-family:var(--font-body);cursor:pointer;padding:0;">See all ›</button>
+        </div>
+        <div class="card" id="upcoming-list"></div>
+      </div>
+
+      <div class="section" style="margin-top:14px; margin-bottom:80px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div class="section-label" style="margin-bottom:0;">Schedule</div>
+          <button onclick="openAddEventModal();switchTab('calendar')" style="background:none;border:none;font-size:12px;font-weight:600;color:var(--green);font-family:var(--font-body);cursor:pointer;padding:0;">+ Add event</button>
+        </div>
+        <div id="home-schedule-list"></div>
+      </div>
+      <div id="ad-banner" style="display:none;margin:0 0 80px;background:var(--gray);border-radius:var(--card-r);padding:12px 14px;align-items:center;gap:10px;border:1px solid var(--gray2);">
+        <span style="font-size:20px;">⭐</span>
+        <div style="flex:1;font-size:12px;color:var(--text2);">Remove ads with <strong>Premium</strong></div>
+        <button onclick="document.getElementById('sub-modal').classList.add('open')" style="background:var(--green);color:#fff;border:none;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;font-family:var(--font-body);cursor:pointer;">Upgrade</button>
+      </div>
+    </div>
+    <div class="bottom-nav" id="nav-home">
+    </div>
+  </div>
+
+  <!-- HISTORY SCREEN -->
+  <div class="screen" id="screen-history">
+    <div class="top-bar" style="padding-bottom:16px;cursor:pointer;" onclick="switchTab('settings')">
+      <div class="greeting" style="opacity:0.7;">← Back</div>
+      <div class="cat-name" id="history-title">Mochi's Log</div>
+    </div>
+    <div class="scroll" style="padding: 0 16px;">
+      <div id="history-content"></div>
+    </div>
+    <div class="bottom-nav"></div>
+  </div>
+
+  <!-- WEIGHT SCREEN -->
+  <div class="screen" id="screen-weight">
+    <div class="top-bar" style="padding-bottom:16px;cursor:pointer;" onclick="switchTab('settings')">
+      <div class="greeting" style="opacity:0.7;">← Back</div>
+      <div class="cat-name" id="weight-title">Mochi</div>
+    </div>
+    <div class="scroll" style="padding: 0 16px;">
+      <div class="section" style="padding:0; margin-top:16px;">
+        <div class="card">
+          <svg class="weight-chart" id="weight-svg" viewBox="0 0 340 140" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#1D9E75" stop-opacity="0.15"/>
+                <stop offset="100%" stop-color="#1D9E75" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+      </div>
+      <div class="section" style="padding:0; margin-top:14px;">
+        <div class="card" id="weight-log-list"></div>
+      </div>
+    </div>
+    <div class="bottom-nav"></div>
+  </div>
+
+  <!-- VET SCREEN -->
+  <div class="screen" id="screen-vet">
+    <div class="top-bar" style="padding-bottom:16px;cursor:pointer;" onclick="switchTab('settings')">
+      <div class="greeting" style="opacity:0.7;">← Back</div>
+      <div class="cat-name" id="vet-title">Mochi</div>
+    </div>
+    <div class="scroll" style="padding: 0 16px;">
+      <div class="section" style="padding:0; margin-top:16px;" id="vet-list"></div>
+    </div>
+    <div class="bottom-nav"></div>
+  </div>
+
+  <!-- CALENDAR SCREEN -->
+  <div class="screen" id="screen-calendar">
+    <div class="top-bar" style="padding-bottom:16px;cursor:pointer;" onclick="switchTab('settings')">
+      <div class="greeting" style="opacity:0.7;">← Back</div>
+      <div class="cat-name">Schedule & Events</div>
+    </div>
+    <div class="scroll" style="padding:0 16px;">
+
+      <!-- Notification permission banner -->
+      <div id="notif-banner" style="display:none;background:var(--amber-light);border-radius:var(--card-r);padding:12px 14px;margin-top:14px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">🔔</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:#854F0B;">Enable reminders</div>
+          <div style="font-size:12px;color:#A06010;margin-top:2px;">Get notified for upcoming events</div>
+        </div>
+        <button onclick="requestNotifPermission()" style="background:#854F0B;color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;font-family:var(--font-body);cursor:pointer;">Allow</button>
+      </div>
+
+      <!-- Add Event button -->
+      <div style="margin-top:14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;" id="cal-count">Events</div>
+        <button onclick="openAddEventModal()" style="background:var(--green);color:#fff;border:none;border-radius:20px;padding:7px 16px;font-size:12px;font-weight:600;font-family:var(--font-body);cursor:pointer;">+ Add event</button>
+      </div>
+
+      <!-- Filter tabs -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+        <button onclick="filterCal('all')" id="cf-all" class="stab active-stab" style="font-size:12px;padding:5px 12px;">All</button>
+        <button onclick="filterCal('vet')" id="cf-vet" class="stab" style="font-size:12px;padding:5px 12px;">💉 Vet</button>
+        <button onclick="filterCal('feed')" id="cf-feed" class="stab" style="font-size:12px;padding:5px 12px;">🍽 Feeding</button>
+        <button onclick="filterCal('med')" id="cf-med" class="stab" style="font-size:12px;padding:5px 12px;">💊 Meds</button>
+        <button onclick="filterCal('groom')" id="cf-groom" class="stab" style="font-size:12px;padding:5px 12px;">✂️ Grooming</button>
+      </div>
+
+      <div id="calendar-events-list"></div>
+    </div>
+    <div class="bottom-nav"></div>
+  </div>
+
+  <!-- ADD EVENT MODAL -->
+  <div class="modal-bg" id="add-event-modal" onclick="closeModal('add-event-modal')">
+    <div class="modal" onclick="event.stopPropagation()" style="max-height:88vh;overflow-y:auto;">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Add event</div>
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <select class="form-input" id="ev-type" onchange="updateEventTypeUI()">
+          <option value="vet">💉 Vet appointment</option>
+          <option value="feed">🍽️ Feeding schedule</option>
+          <option value="med">💊 Medication</option>
+          <option value="groom">✂️ Grooming</option>
+          <option value="other">📌 Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Title</label>
+        <input class="form-input" id="ev-title" type="text" placeholder="e.g. Rabies booster">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input class="form-input" id="ev-date" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Time</label>
+        <input class="form-input" id="ev-time" type="time" value="10:00">
+      </div>
+      <div class="form-group" id="ev-doctor-group">
+        <label class="form-label">Doctor / Location</label>
+        <input class="form-input" id="ev-doctor" type="text" placeholder="e.g. Dr. Rahman, City Vet Clinic">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="ev-notes" type="text" placeholder="Optional notes">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Reminder</label>
+        <select class="form-input" id="ev-reminder">
+          <option value="0">At the time</option>
+          <option value="15">15 minutes before</option>
+          <option value="30">30 minutes before</option>
+          <option value="60" selected>1 hour before</option>
+          <option value="1440">1 day before</option>
+        </select>
+      </div>
+      <button class="save-btn" onclick="saveEvent()" style="margin-bottom:8px;">Save event</button>
+      <button onclick="saveEventAndExport()" style="width:100%;background:var(--gray);color:var(--text);border:1px solid var(--gray2);border-radius:12px;padding:12px;font-size:14px;font-weight:600;font-family:var(--font-body);cursor:pointer;">📲 Save + Add to device calendar</button>
+    </div>
+  </div>
+
+  <!-- GALLERY SCREEN -->
+  <div class="screen" id="screen-gallery">
+    <div class="top-bar" style="padding-bottom:16px;">
+      <div class="greeting">Photo memories</div>
+      <div class="cat-name" id="gallery-title">Mochi's Gallery</div>
+    </div>
+    <div class="scroll" style="padding: 0 16px;">
+      <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;" id="gallery-count">0 photos</span>
+        <button onclick="triggerGalleryUpload()" style="background:var(--green);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;font-family:var(--font-body);cursor:pointer;">+ Add photo</button>
+      </div>
+      <input type="file" id="gallery-input" accept="image/*" multiple style="display:none" onchange="handleGalleryUpload(event)">
+      <div id="gallery-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:16px;"></div>
+    </div>
+    <div class="bottom-nav"></div>
+  </div>
+
+  <!-- ENCYCLOPEDIA SCREEN -->
+  <div class="screen" id="screen-encyclopedia">
+    <div class="top-bar" style="padding-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+        <div>
+          <div class="greeting">Cat breeds</div>
+          <div class="cat-name">Encyclopedia</div>
+        </div>
+        <button onclick="openAddBreedModal()" style="background:rgba(255,255,255,0.2);border:1.5px solid rgba(255,255,255,0.4);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;color:#fff;font-family:var(--font-body);cursor:pointer;margin-bottom:4px;">+ Add breed</button>
+      </div>
+    </div>
+    <div class="scroll" style="padding:0 16px;">
+      <!-- Tab switcher -->
+      <div style="display:flex;gap:6px;margin-top:14px;margin-bottom:12px;">
+        <button onclick="showEncycTab('breeds')" id="etab-breeds" class="stab active-stab" style="font-size:12px;padding:6px 14px;">📖 Breeds</button>
+        <button onclick="showEncycTab('leaderboard')" id="etab-leaderboard" class="stab" style="font-size:12px;padding:6px 14px;">🏆 Leaderboard</button>
+      </div>
+      <!-- Breeds tab -->
+      <div id="encyc-breeds-tab">
+        <div style="margin-bottom:12px;">
+          <input id="breed-search" class="form-input" type="text" placeholder="Search breed..." oninput="filterBreeds()" style="width:100%;">
+        </div>
+        <div id="breed-list"></div>
+      </div>
+      <!-- Leaderboard tab -->
+      <div id="encyc-leaderboard-tab" style="display:none;">
+        <div id="leaderboard-content"></div>
+      </div>
+    </div>
+    <div class="bottom-nav"></div>
+  </div>
+
+  <!-- ADD BREED MODAL -->
+  <div class="modal-bg" id="add-breed-modal" onclick="closeModal('add-breed-modal')">
+    <div class="modal" onclick="event.stopPropagation()" style="max-height:88vh;overflow-y:auto;">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Add a breed</div>
+      <div class="form-group">
+        <label class="form-label">Breed name *</label>
+        <input class="form-input" id="nb-name" type="text" placeholder="e.g. Domestic Shorthair" oninput="checkBreedDuplicate(this.value)">
+        <div id="nb-duplicate-inline" style="display:none;margin-top:6px;background:var(--coral-light);color:var(--coral);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:500;">⚠️ This breed already exists in the encyclopedia</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Origin country *</label>
+        <input class="form-input" id="nb-origin" type="text" placeholder="e.g. USA">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Lifespan</label>
+        <input class="form-input" id="nb-life" type="text" placeholder="e.g. 12–16 yrs">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Weight</label>
+        <input class="form-input" id="nb-weight" type="text" placeholder="e.g. 3–6 kg">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Coat type</label>
+        <input class="form-input" id="nb-coat" type="text" placeholder="e.g. Short">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" id="nb-desc" rows="3" placeholder="Describe this breed's personality and traits..." style="resize:none;"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tags (comma separated)</label>
+        <input class="form-input" id="nb-tags" type="text" placeholder="e.g. Playful, Calm, Rare">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Your name (for leaderboard) 🏆</label>
+        <input class="form-input" id="nb-contributor" type="text" placeholder="e.g. Sarah from Tokyo">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Photo</label>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div id="nb-photo-preview" style="width:64px;height:64px;border-radius:14px;background:var(--gray2);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">🐱</div>
+          <div>
+            <input type="file" id="nb-photo-input" accept="image/*" style="display:none" onchange="handleNewBreedPhoto(event)">
+            <button onclick="document.getElementById('nb-photo-input').click()" style="background:var(--gray);border:1px solid var(--gray2);border-radius:10px;padding:8px 14px;font-size:13px;font-family:var(--font-body);cursor:pointer;color:var(--text2);">📷 Upload photo</button>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px;">Upload from your gallery</div>
+          </div>
+        </div>
+      </div>
+      <button class="save-btn" onclick="saveNewBreed()">Add to Encyclopedia</button>
+      <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px;">Your name appears on the leaderboard 🏆</div>
+    </div>
+  </div>
+
+  <!-- BREED DETAIL SCREEN -->
+  <div class="screen" id="screen-breed-detail">
+    <div class="top-bar" style="padding-bottom:16px; cursor:pointer;" onclick="switchTab('encyclopedia')">
+      <div class="greeting" style="opacity:0.7;">← Back to breeds</div>
+      <div class="cat-name" id="breed-detail-name">Scottish Fold</div>
+    </div>
+    <div class="scroll" style="padding:0 16px;">
+      <div id="breed-detail-content"></div>
+    </div>
+    <div class="bottom-nav"></div>
+  </div>
+
+  <!-- PHOTO LIGHTBOX -->
+  <div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;align-items:center;justify-content:center;flex-direction:column;" onclick="closeLightbox()">
+    <img id="lightbox-img" style="max-width:96vw;max-height:82vh;border-radius:12px;object-fit:contain;">
+    <button onclick="deleteGalleryPhoto(event)" style="margin-top:16px;background:var(--coral);color:#fff;border:none;border-radius:20px;padding:8px 20px;font-size:13px;font-weight:600;font-family:var(--font-body);cursor:pointer;">🗑 Delete photo</button>
+  </div>
+
+  <!-- SOCIAL SCREEN -->
+  <div class="screen" id="screen-social">
+    <div class="top-bar" style="padding-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="greeting">Cat community</div>
+          <div class="cat-name">Paw Pals 🐾</div>
+        </div>
+        <div id="premium-badge-top" style="display:none;background:rgba(255,255,255,0.2);border:1.5px solid rgba(255,255,255,0.4);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;color:#fff;margin-top:4px;">⭐ Premium</div>
+      </div>
+    </div>
+    <div class="scroll" style="padding:0 16px;">
+      <div style="margin-top:14px;margin-bottom:10px;display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;">
+        <button onclick="showSocialTab('feed')" id="stab-feed" class="stab active-stab">Feed</button>
+        <button onclick="showSocialTab('friends')" id="stab-friends" class="stab">My Pals</button>
+        <button onclick="showSocialTab('add')" id="stab-add" class="stab">+ Add Pal</button>
+      </div>
+      <div id="social-feed-section"><div id="social-feed"></div></div>
+      <div id="social-friends-section" style="display:none;"><div id="social-friends-list"></div></div>
+      <div id="social-add-section" style="display:none;"><div id="social-add-content"></div></div>
+    </div>
+    <div class="bottom-nav"></div>
+  </div>
+
+  <!-- PAL PROFILE SCREEN -->
+  <div class="screen" id="screen-pal-profile">
+    <div class="top-bar" style="padding-bottom:16px;cursor:pointer;" onclick="showSocialTab('friends');switchTab('social')">
+      <div class="greeting" style="opacity:0.7;">← Back to Pals</div>
+      <div class="cat-name" id="pal-profile-name">Luna</div>
+    </div>
+    <div class="scroll" style="padding:0 16px;">
+      <div id="pal-profile-content"></div>
+    </div>
+    <div class="bottom-nav"></div>
+  </div>
+
+  <!-- CHAT SCREEN -->
+  <div class="screen" id="screen-chat">
+    <div class="top-bar" style="padding-bottom:12px;cursor:pointer;" onclick="openPalProfile(state.activeChatPalId)">
+      <div class="greeting" style="opacity:0.7;">← Back to profile</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+        <div id="chat-pal-avatar" style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;"></div>
+        <div class="cat-name" id="chat-pal-name" style="font-size:22px;">Luna</div>
+      </div>
+    </div>
+    <div id="chat-messages" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;"></div>
+    <div style="padding:10px 16px;background:var(--white);border-top:1px solid var(--gray2);display:flex;gap:8px;">
+      <input id="chat-input" class="form-input" type="text" placeholder="Message..." style="flex:1;font-size:14px;padding:10px 14px;">
+      <button onclick="sendChatMessage()" style="background:var(--green);color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:18px;cursor:pointer;flex-shrink:0;">➤</button>
+    </div>
+  </div>
+
+  <!-- SUBSCRIPTION MODAL -->
+  <div class="modal-bg" id="sub-modal" onclick="closeModal('sub-modal')">
+    <div class="modal" onclick="event.stopPropagation()" style="text-align:center;max-height:88vh;overflow-y:auto;">
+      <div class="modal-handle"></div>
+      <div style="font-size:44px;margin-bottom:6px;">⭐</div>
+      <div style="font-family:var(--font-display);font-size:24px;margin-bottom:6px;">PawLog Premium</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px;">Everything your cat deserves.</div>
+      <div class="card" style="text-align:left;margin-bottom:14px;">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;font-size:14px;"><span style="color:var(--green);font-size:16px;">✓</span> Private cat-to-cat messaging</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:14px;"><span style="color:var(--green);font-size:16px;">✓</span> Unlimited pal profiles</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:14px;"><span style="color:var(--green);font-size:16px;">✓</span> Post to community feed</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:14px;"><span style="color:var(--green);font-size:16px;">✓</span> AI food analyzer & health tips</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:14px;"><span style="color:var(--green);font-size:16px;">✓</span> No ads, ever</div>
+        </div>
+      </div>
+
+      <!-- Plan picker -->
+      <div style="display:flex;gap:8px;margin-bottom:14px;" id="plan-picker">
+        <div onclick="selectPlan('monthly')" id="plan-monthly" style="flex:1;border:2px solid var(--green);border-radius:14px;padding:12px 8px;cursor:pointer;background:var(--green-light);">
+          <div style="font-size:12px;font-weight:600;color:var(--green);">MONTHLY</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text);margin-top:4px;">$0.99</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">per month</div>
+        </div>
+        <div onclick="selectPlan('lifetime')" id="plan-lifetime" style="flex:1;border:2px solid var(--gray2);border-radius:14px;padding:12px 8px;cursor:pointer;position:relative;">
+          <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--amber);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px;white-space:nowrap;">BEST VALUE</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text2);">LIFETIME</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text);margin-top:4px;">$4.99</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">pay once, forever</div>
+        </div>
+      </div>
+
+      <!-- Promo code -->
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;gap:8px;">
+          <input id="promo-input" class="form-input" type="text" placeholder="Promo code" style="flex:1;text-transform:uppercase;letter-spacing:0.05em;">
+          <button onclick="applyPromo()" style="background:var(--green);color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:600;font-family:var(--font-body);cursor:pointer;">Apply</button>
+        </div>
+        <div id="promo-result" style="font-size:12px;margin-top:6px;min-height:16px;"></div>
+      </div>
+
+      <button class="save-btn" id="sub-main-btn" onclick="activatePremium()" style="margin-bottom:8px;font-size:15px;">🐾 Unlock Premium — $0.99/mo</button>
+      <div style="font-size:11px;color:var(--text3);">Cancel anytime · No hidden fees</div>
+    </div>
+  </div>
+
+  <!-- WEEKLY REPORT SCREEN -->
+  <div class="screen" id="screen-weeklyrep">
+    <div class="top-bar" style="padding-bottom:16px;cursor:pointer;" onclick="switchTab('settings')">
+      <div class="greeting" style="opacity:0.7;">← Back</div>
+      <div class="cat-name" id="weekly-title">Weekly Report</div>
+    </div>
+    <div class="scroll" style="padding:0 16px;">
+      <div style="margin-top:14px;" id="weekly-report-content"></div>
+    </div>
+    <div class="bottom-nav"></div>
+  </div>
+
+  <!-- FOOD ANALYZER SCREEN -->
+  <div class="screen" id="screen-food">
+    <div class="top-bar" style="padding-bottom:16px;cursor:pointer;" onclick="switchTab('settings')">
+      <div class="greeting" style="opacity:0.7;">← Back</div>
+      <div class="cat-name">Food Analyzer 🍽️</div>
+    </div>
+    <div class="scroll" style="padding:0 16px;">
+      <div style="margin-top:14px;">
+        <div class="card" style="margin-bottom:12px;">
+          <div style="font-size:14px;font-weight:500;margin-bottom:10px;">Paste ingredients or describe the food</div>
+          <textarea class="form-input" id="food-input" rows="4" placeholder="e.g. Chicken, water, chicken liver, pea protein, tapioca starch, sunflower oil, carrageenan, potassium chloride, salt..." style="resize:none;width:100%;"></textarea>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button onclick="analyzeFood()" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:600;font-family:var(--font-body);cursor:pointer;">🔍 Analyze</button>
+            <button onclick="triggerFoodPhoto()" style="background:var(--gray);border:1px solid var(--gray2);border-radius:12px;padding:12px 14px;font-size:20px;cursor:pointer;">📷</button>
+          </div>
+          <input type="file" id="food-photo-input" accept="image/*" style="display:none" onchange="analyzeFoodPhoto(event)">
+        </div>
+        <div id="food-result"></div>
+        <div style="margin-top:14px;">
+          <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">Dangerous for cats</div>
+          <div class="card">
+            <div style="display:flex;flex-wrap:wrap;gap:6px;" id="danger-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-nav"></div>
+  </div>
+
+  <!-- CAT PROFILE CARD SCREEN -->
+  <div class="screen" id="screen-catcard">
+    <div class="top-bar" style="padding-bottom:16px;cursor:pointer;" onclick="switchTab('settings')">
+      <div class="greeting" style="opacity:0.7;">← Back</div>
+      <div class="cat-name">Cat Profile Card 🪪</div>
+    </div>
+    <div class="scroll" style="padding:0 16px;">
+      <div style="margin-top:14px;" id="cat-card-preview"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;margin-bottom:80px;">
+        <button onclick="shareCatCard()" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:600;font-family:var(--font-body);cursor:pointer;">📤 Share card</button>
+        <button onclick="downloadCatCard()" style="flex:1;background:var(--gray);border:1px solid var(--gray2);border-radius:12px;padding:13px;font-size:14px;font-weight:600;font-family:var(--font-body);cursor:pointer;">⬇️ Download</button>
+      </div>
+    </div>
+    <div class="bottom-nav"></div>
+  </div>
+
+  <!-- AI HEALTH TIPS SCREEN -->
+  <div class="screen" id="screen-healthtips">
+    <div class="top-bar" style="padding-bottom:16px;cursor:pointer;" onclick="switchTab('settings')">
+      <div class="greeting" style="opacity:0.7;">← Back</div>
+      <div class="cat-name" id="tips-cat-name">Health Tips</div>
+    </div>
+    <div class="scroll" style="padding:0 16px;">
+      <div style="margin-top:14px;" id="health-tips-content">
+        <div class="empty"><div class="empty-icon">💡</div>Loading tips...</div>
+      </div>
+    </div>
+    <div class="bottom-nav"></div>
+  </div>
+
+  <!-- SETTINGS SCREEN -->
+  <div class="screen" id="screen-settings">
+    <div class="scroll">
+      <div class="settings-cat-header">
+        <div class="cat-photo-wrap" onclick="triggerPhotoUpload()">
+          <div class="cat-avatar" id="settings-avatar">🐱</div>
+          <div class="photo-edit-badge">📷</div>
+        </div>
+        <div class="cat-name-big" id="settings-cat-name">Mochi</div>
+        <div class="cat-breed" id="settings-breed">Scottish Fold · 3 years old</div>
+        <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
+      </div>
+      <div class="section">
+        <div class="section-label">Cat Profile</div>
+        <div class="card">
+          <div class="settings-row">
+            <span class="settings-label">Name</span>
+            <span class="settings-val" id="s-name">—</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Breed</span>
+            <span class="settings-val" id="s-breed">—</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Birthday</span>
+            <span class="settings-val" id="s-bday">—</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Food type</span>
+            <span class="settings-val" id="s-food">—</span>
+          </div>
+          <div class="settings-row" onclick="confirmDeleteCat(state.activeCat)" style="cursor:pointer;">
+            <span class="settings-label" style="color:var(--coral);">🗑 Delete this cat</span>
+            <span style="color:var(--coral);font-size:18px;">›</span>
+          </div>
+        </div>
+      </div>
+      <div class="section" style="margin-top:14px;">
+        <div class="section-label">Tools</div>
+        <div class="card">
+          <div class="settings-row" onclick="switchTab('food')" style="cursor:pointer;">
+            <span class="settings-label">🍽️ Food analyzer</span>
+            <span style="color:var(--text3);font-size:18px;">›</span>
+          </div>
+          <div class="settings-row" onclick="switchTab('catcard')" style="cursor:pointer;">
+            <span class="settings-label">🪪 Cat profile card</span>
+            <span style="color:var(--text3);font-size:18px;">›</span>
+          </div>
+          <div class="settings-row" onclick="switchTab('weeklyrep')" style="cursor:pointer;">
+            <span class="settings-label">📊 Weekly report card</span>
+            <span style="color:var(--text3);font-size:18px;">›</span>
+          </div>
+          <div class="settings-row" onclick="switchTab('healthtips')" style="cursor:pointer;">
+            <span class="settings-label">💡 AI health tips</span>
+            <span style="color:var(--text3);font-size:18px;">›</span>
+          </div>
+          <div class="settings-row" onclick="switchTab('calendar')" style="cursor:pointer;">
+            <span class="settings-label">📅 Schedule & Events</span>
+            <span style="color:var(--text3);font-size:18px;">›</span>
+          </div>
+          <div class="settings-row" onclick="switchTab('weight')" style="cursor:pointer;">
+            <span class="settings-label">⚖️ Weight tracker</span>
+            <span style="color:var(--text3);font-size:18px;">›</span>
+          </div>
+          <div class="settings-row" onclick="switchTab('history')" style="cursor:pointer;">
+            <span class="settings-label">📋 Care history</span>
+            <span style="color:var(--text3);font-size:18px;">›</span>
+          </div>
+          <div class="settings-row" onclick="switchTab('vet')" style="cursor:pointer;">
+            <span class="settings-label">🗓️ Vet appointments</span>
+            <span style="color:var(--text3);font-size:18px;">›</span>
+          </div>
+        </div>
+      </div>
+      <div class="section" style="margin-top:14px;">
+        <div class="section-label">Premium</div>
+        <div class="card">
+          <div class="settings-row" onclick="document.getElementById('sub-modal').classList.add('open')" style="cursor:pointer;">
+            <span class="settings-label">⭐ <span id="premium-settings-label">Upgrade to Premium</span></span>
+            <span style="color:var(--text3);font-size:18px;">›</span>
+          </div>
+        </div>
+      </div>
+      <div class="section" style="margin-top:14px;">
+        <div class="section-label">Reminders</div>
+        <div class="card">
+          <div class="settings-row">
+            <span class="settings-label">Morning meal</span>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Evening meal</span>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Vet reminders</span>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Daily mood log</span>
+            <div class="toggle" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 20px 16px 100px; text-align:center; font-size:12px; color:var(--text3);">
+        PawLog v1.0 · Made with ♥ for cat lovers
+      </div>
+    </div>
+    <div class="bottom-nav"></div>
+  </div>
+
+  <!-- ONBOARDING MODAL -->
+  <div class="modal-bg" id="onboarding-modal">
+    <div class="modal" onclick="event.stopPropagation()" style="text-align:center;">
+      <div style="font-size:56px;margin-bottom:8px;">🐱</div>
+      <div style="font-family:'DM Serif Display',serif;font-size:26px;margin-bottom:8px;">Welcome to PawLog</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:20px;">The all-in-one cat care tracker.<br>Let's add your first cat to get started.</div>
+      <div class="form-group" style="text-align:left;">
+        <label class="form-label">Cat's name *</label>
+        <input class="form-input" id="ob-name" type="text" placeholder="e.g. Luna">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label class="form-label">Breed</label>
+        <input class="form-input" id="ob-breed" type="text" placeholder="e.g. Persian">
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label class="form-label">Birthday</label>
+        <input class="form-input" id="ob-bday" type="date">
+      </div>
+      <button class="save-btn" onclick="completeOnboarding()" style="font-size:16px;">Let's go! 🐾</button>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" id="fab-btn" onclick="openAddModal()">+</button>
+
+  <!-- ADD MODAL -->
+  <div class="modal-bg" id="add-modal" onclick="closeModal('add-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Log something</div>
+      <div class="option-list">
+        <button class="option-btn" onclick="openEntryForm('feed')"><span class="option-icon">🍽️</span>Feeding</button>
+        <button class="option-btn" onclick="openEntryForm('mood')"><span class="option-icon">😸</span>Mood check-in</button>
+        <button class="option-btn" onclick="openEntryForm('weight')"><span class="option-icon">⚖️</span>Weight</button>
+        <button class="option-btn" onclick="openEntryForm('vet')"><span class="option-icon">💉</span>Vet appointment</button>
+        <button class="option-btn" onclick="openEntryForm('note')"><span class="option-icon">📝</span>Note</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENTRY FORM MODAL -->
+  <div class="modal-bg" id="entry-modal" onclick="closeModal('entry-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="entry-form-title">Log feeding</div>
+      <div id="entry-form-body"></div>
+    </div>
+  </div>
+
+  <!-- CAT SWITCHER MODAL -->
+  <div class="modal-bg" id="switcher-modal" onclick="closeModal('switcher-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Your cats</div>
+      <div class="option-list" id="cat-switcher-list"></div>
+      <button class="option-btn" style="margin-top:8px;" onclick="openAddCatForm()"><span class="option-icon">➕</span>Add a new cat</button>
+    </div>
+  </div>
+
+  <!-- ADD CAT MODAL -->
+  <div class="modal-bg" id="addcat-modal" onclick="closeModal('addcat-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Add a cat</div>
+      <div class="form-group">
+        <label class="form-label">Cat's name</label>
+        <input id="new-cat-name" class="form-input" type="text" placeholder="e.g. Luna">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Breed</label>
+        <input id="new-cat-breed" class="form-input" type="text" placeholder="e.g. Persian">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Birthday</label>
+        <input id="new-cat-bday" class="form-input" type="date">
+      </div>
+      <button class="save-btn" onclick="addNewCat()">Add cat</button>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'pawlog_v1';
+let state = {
+  activeCat: 0,
+  cats: [],
+  nextId: 1,
+  currentTab: 'home',
+  currentMood: 'Happy',
+};
+
+function today(t) { return `Today · ${t}`; }
+function yesterday(t) { return `Yesterday · ${t}`; }
+function todayTs(h,m) { const d = new Date(); d.setHours(h,m,0,0); return d.getTime(); }
+function yesterdayTs(h,m) { const d = new Date(); d.setDate(d.getDate()-1); d.setHours(h,m,0,0); return d.getTime(); }
+function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {} }
+function load() { try { const s = localStorage.getItem(STORAGE_KEY); if(s) state = JSON.parse(s); } catch(e) {} }
+
+function getCat() {
+  if (!state.cats.length) return null;
+  return state.cats[state.activeCat] || state.cats[0];
+}
+
+function showOnboarding() {
+  document.getElementById('onboarding-modal').classList.add('open');
+}
+
+function completeOnboarding() {
+  const name = document.getElementById('ob-name').value.trim();
+  if (!name) { showToast('Give your cat a name first 🐱'); return; }
+  const breed = document.getElementById('ob-breed').value.trim();
+  const bday = document.getElementById('ob-bday').value || '2022-01-01';
+  const newCat = {
+    id: state.nextId++, name, breed: breed || 'Mixed', birthday: bday,
+    food: 'Dry food', streak: 0, logs: [], weights: [], vets: [],
+    gallery: [], photo: ''
+  };
+  state.cats.push(newCat);
+  state.activeCat = 0;
+  state.onboardingDone = true;
+  save();
+  document.getElementById('onboarding-modal').classList.remove('open');
+  renderAll();
+  showToast('Welcome, ' + name + '! 🐾');
+}
+
+// ─── NAV ──────────────────────────────────────────────────────────────────
+const TABS = [
+  { id: 'home', icon: '🏠', label: 'Home' },
+  { id: 'gallery', icon: '📸', label: 'Gallery' },
+  { id: 'encyclopedia', icon: '📖', label: 'Breeds' },
+  { id: 'social', icon: '🐾', label: 'Pals' },
+  { id: 'settings', icon: '⚙️', label: 'More' },
+];
+
+// ─── INIT ─────────────────────────────────────────────────────────────────
+function updateGreeting() {
+  const h = new Date().getHours();
+  const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('greeting-text').textContent = g;
+}
+
+function buildNavs() {
+  document.querySelectorAll('.bottom-nav').forEach(nav => {
+    nav.innerHTML = TABS.map(t => `
+      <div class="nav-item ${state.currentTab === t.id ? 'active' : ''}" onclick="switchTab('${t.id}')">
+        <span class="ni">${t.icon}</span>${t.label}
+      </div>
+    `).join('');
+  });
+}
+
+load();
+buildNavs();
+if (state.cats.length === 0 && !state.onboardingDone) {
+  showOnboarding();
+} else {
+  renderAll();
+}
+updateGreeting();
+
+function switchTab(tab) {
+  state.currentTab = tab;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const screenEl = document.getElementById('screen-' + tab);
+  if (screenEl) screenEl.classList.add('active');
+  const fab = document.getElementById('fab-btn');
+  const hideFab = ['settings','encyclopedia','social','pal-profile','chat','food','catcard','healthtips','calendar','weight','history','vet'].includes(tab);
+  fab.style.display = hideFab ? 'none' : 'flex';
+  buildNavs();
+  if (tab === 'gallery') renderGallery();
+  if (tab === 'encyclopedia') renderEncyclopedia();
+  if (tab === 'social') renderSocial();
+  if (tab === 'settings') { renderSettings(); updatePremiumLabel(); }
+  if (tab === 'food') renderFoodAnalyzer();
+  if (tab === 'catcard') renderCatCard();
+  if (tab === 'weeklyrep') renderWeeklyReport();
+  if (tab === 'healthtips') renderHealthTips();
+  if (tab === 'calendar') renderCalendar();
+  if (tab === 'history') renderHistory();
+  if (tab === 'vet') renderVet();
+}
+
+function updatePremiumLabel() {
+  const el = document.getElementById('premium-settings-label');
+  if (el) el.textContent = isPremium() ? '⭐ Premium — Active' : 'Upgrade to Premium — $0.99/mo';
+}
+
+// ─── RENDER HOME ──────────────────────────────────────────────────────────
+function renderAll() {
+  const cat = getCat();
+  if (!cat) return; // no cats yet — onboarding will handle it
+  document.getElementById('home-cat-name').textContent = cat.name + "'s Day";
+  document.getElementById('mood-cat-name').textContent = cat.name;
+  document.getElementById('streak-label').textContent = cat.streak + '-day care streak';
+  const homePhoto = document.getElementById('home-cat-photo');
+  if (cat.photo) {
+    homePhoto.innerHTML = `<img src="${cat.photo}" alt="${cat.name}">`;
+  } else {
+    homePhoto.innerHTML = '🐱';
+  }
+
+  // Care checklist
+  const now = new Date();
+  const hour = now.getHours();
+  const morningDone = cat.logs.some(l => l.type === 'feed' && l.ts > todayTs(0,0) && l.ts < todayTs(12,0));
+  const eveningDone = cat.logs.some(l => l.type === 'feed' && l.ts > todayTs(12,0));
+  const waterDone = cat.logs.some(l => l.type === 'note' && l.detail.toLowerCase().includes('water') && l.ts > todayTs(0,0));
+  const foodType = cat.food || 'Food';
+
+  document.getElementById('care-list').innerHTML = `
+    <div class="log-row">
+      <div class="log-left"><div class="log-name">${'Morning meal'}</div><div class="log-sub">${foodType}</div></div>
+      <span class="badge ${morningDone ? 'badge-done' : hour >= 9 ? 'badge-alert' : 'badge-pending'}">${morningDone ? 'Done' : hour >= 9 ? 'Missed' : 'Upcoming'}</span>
+    </div>
+    <div class="log-row">
+      <div class="log-left"><div class="log-name">${'Evening meal'}</div><div class="log-sub">${foodType}</div></div>
+      <span class="badge ${eveningDone ? 'badge-done' : hour >= 18 ? 'badge-alert' : hour >= 16 ? 'badge-due' : 'badge-pending'}">${eveningDone ? 'Done' : hour >= 18 ? 'Missed' : hour >= 16 ? 'Due soon' : 'Upcoming'}</span>
+    </div>
+    <div class="log-row">
+      <div class="log-left"><div class="log-name">${'Water refill'}</div><div class="log-sub"></div></div>
+      <span class="badge ${waterDone ? 'badge-done' : 'badge-pending'}">${waterDone ? 'Done' : 'Pending'}</span>
+    </div>
+  `;
+
+  // Weight stat
+  const weights = cat.weights;
+  if (weights && weights.length) {
+    const latest = weights[weights.length - 1];
+    document.getElementById('weight-stat').innerHTML = latest.val.toFixed(1) + '<span class="stat-unit"> kg</span>';
+  } else {
+    document.getElementById('weight-stat').innerHTML = '—<span class="stat-unit"> kg</span>';
+  }
+
+  // Vet countdown
+  const nextVet = cat.vets && cat.vets.filter(v => v.daysLeft > 0).sort((a,b) => a.daysLeft - b.daysLeft)[0];
+  if (nextVet) {
+    document.getElementById('vet-stat').innerHTML = nextVet.daysLeft + '<span class="stat-unit"> days</span>';
+  } else {
+    document.getElementById('vet-stat').innerHTML = '—<span class="stat-unit"></span>';
+  }
+
+  // Cat age in human years
+  const ageEl = document.getElementById('age-human-stat');
+  if (ageEl && cat.birthday) {
+    const catYears = (Date.now() - new Date(cat.birthday)) / (365.25*24*3600*1000);
+    ageEl.textContent = catToHumanAge(catYears);
+  }
+
+  // Weekly care score
+  const scoreEl = document.getElementById('weekly-score-stat');
+  if (scoreEl) {
+    const weekStart = Date.now() - 7*24*3600*1000;
+    const weekLogs = (cat.logs||[]).filter(l => l.ts > weekStart);
+    const score = Math.min(100, Math.round((weekLogs.length / 14) * 100));
+    const grade = score >= 85 ? 'A' : score >= 70 ? 'B' : score >= 50 ? 'C' : 'D';
+    scoreEl.textContent = grade;
+    scoreEl.style.color = score >= 70 ? 'var(--green)' : score >= 50 ? 'var(--amber)' : 'var(--coral)';
+  }
+
+  // Ad banner visibility
+  updatePremiumUI();
+
+  // Upcoming vet appointments
+  const upList = document.getElementById('upcoming-list');
+  const upcoming = cat.vets.slice(0,2);
+  if (upcoming.length) {
+    upList.innerHTML = upcoming.map(v => `
+      <div class="vet-row">
+        <div class="vet-icon ${v.daysLeft <= 14 ? 'amber' : ''}">${v.icon}</div>
+        <div class="vet-info">
+          <div class="vet-name">${v.name}</div>
+          <div class="vet-date">${v.date} · ${v.doctor}</div>
+        </div>
+        <span class="badge ${v.daysLeft <= 14 ? 'badge-due' : 'badge-pending'}">${v.daysLeft}d</span>
+      </div>
+    `).join('');
+  } else {
+    upList.innerHTML = '<div class="empty"><div class="empty-icon">🗓️</div>No upcoming appointments</div>';
+  }
+
+  // Home schedule — show next 3 events from calendar
+  const schedEl = document.getElementById('home-schedule-list');
+  if (schedEl) {
+    if (!state.events) state.events = [];
+    const now = new Date();
+    const EV_IC = { vet:'💉', feed:'🍽️', med:'💊', groom:'✂️', other:'📌' };
+    const upcoming3 = state.events
+      .filter(e => new Date(e.date + 'T' + (e.time||'10:00')) >= now)
+      .sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time))
+      .slice(0,3);
+    if (!upcoming3.length) {
+      schedEl.innerHTML = `<div class="card" style="cursor:pointer;" onclick="switchTab('calendar')">
+        <div style="display:flex;align-items:center;gap:12px;padding:4px 0;">
+          <div style="width:40px;height:40px;background:var(--green-light);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;">📅</div>
+          <div>
+            <div style="font-size:14px;font-weight:500;color:var(--text);">No events scheduled</div>
+            <div style="font-size:12px;color:var(--green);margin-top:2px;">Tap to add vet, meds, grooming →</div>
+          </div>
+        </div>
+      </div>`;
+    } else {
+      schedEl.innerHTML = upcoming3.map(e => {
+        const evDate = new Date(e.date + 'T' + (e.time||'10:00'));
+        const diffDays = Math.round((evDate - now) / 86400000);
+        const label = diffDays === 0 ? 'Today' : diffDays === 1 ? 'Tomorrow' : diffDays + ' days';
+        const isUrgent = diffDays <= 1;
+        const dateStr = evDate.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+        const timeStr = evDate.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+        return `<div class="card" style="margin-bottom:8px;cursor:pointer;" onclick="switchTab('calendar')">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;background:${isUrgent?'var(--coral-light)':'var(--green-light)'};border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${EV_IC[e.type]||'📌'}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.title}</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:2px;">${dateStr} · ${timeStr}</div>
+            </div>
+            <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:${isUrgent?'var(--coral-light)':'var(--gray2)'};color:${isUrgent?'var(--coral)':'var(--text2)'};flex-shrink:0;">${label}</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+// ─── MOOD ─────────────────────────────────────────────────────────────────
+function setMood(el, mood) {
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  state.currentMood = mood;
+  logEntry({ type: 'mood', label: 'Mood: ' + mood, detail: el.textContent.trim() });
+  showToast('Mood saved ' + el.textContent.trim());
+}
+
+// ─── HISTORY ──────────────────────────────────────────────────────────────
+function renderHistory() {
+  const cat = getCat();
+  document.getElementById('history-title').textContent = cat.name + "'s Log";
+  const logs = [...cat.logs].sort((a,b) => b.ts - a.ts);
+  if (!logs.length) {
+    document.getElementById('history-content').innerHTML = '<div class="empty" style="padding-top:40px;"><div class="empty-icon">📋</div>No logs yet. Start tracking!</div>';
+    return;
+  }
+  const groups = {};
+  logs.forEach(l => {
+    const d = new Date(l.ts);
+    const key = d.toDateString();
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(l);
+  });
+  const icons = { feed: '🍽️', mood: '😸', weight: '⚖️', vet: '💉', note: '📝' };
+  const iconClass = { feed: 'feed', mood: 'mood', weight: 'weight', vet: 'vet', note: 'feed' };
+  let html = '';
+  Object.keys(groups).forEach(day => {
+    const d = new Date(day);
+    const isToday = d.toDateString() === new Date().toDateString();
+    const label = isToday ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    html += `<div class="hist-day">${label}</div>`;
+    groups[day].forEach(l => {
+      const t = new Date(l.ts);
+      const timeStr = t.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      html += `
+        <div class="hist-entry">
+          <div class="hist-icon ${iconClass[l.type] || 'feed'}">${icons[l.type] || '📝'}</div>
+          <div class="hist-text">
+            <div class="hist-name">${l.label}</div>
+            <div class="hist-detail">${l.detail}</div>
+            <div class="hist-time">${timeStr}</div>
+          </div>
+        </div>`;
+    });
+  });
+  document.getElementById('history-content').innerHTML = html;
+}
+
+// ─── WEIGHT ───────────────────────────────────────────────────────────────
+function renderWeight() {
+  const cat = getCat();
+  document.getElementById('weight-title').textContent = cat.name;
+  const weights = cat.weights || [];
+  const listEl = document.getElementById('weight-log-list');
+
+  if (!weights.length) {
+    document.getElementById('weight-svg').innerHTML = '';
+    listEl.innerHTML = `<div class="empty"><div class="empty-icon">⚖️</div>No weight logs yet<br><span style="font-size:13px;color:var(--green);cursor:pointer;" onclick="closeModal && openEntryForm('weight')">Tap + to log your first weight</span></div>`;
+    return;
+  }
+
+  // Single entry — just show a dot, skip line math
+  const vals = weights.map(w => w.val);
+  const minV = Math.min(...vals) - 0.2;
+  const maxV = Math.max(...vals) + 0.2;
+  const n = weights.length;
+  const W = 340, H = 140, padX = 20, padY = 18;
+  const x = i => n === 1 ? W / 2 : padX + (i / (n - 1)) * (W - padX * 2);
+  const y = v => maxV === minV ? H / 2 : padY + (1 - (v - minV) / (maxV - minV)) * (H - padY * 2);
+  const linePath = n > 1 ? `M ${weights.map((w, i) => `${x(i).toFixed(1)} ${y(w.val).toFixed(1)}`).join(' L ')}` : '';
+  const areaPath = n > 1 ? `M ${x(0)} ${H} ${weights.map((w, i) => `L ${x(i).toFixed(1)} ${y(w.val).toFixed(1)}`).join(' ')} L ${x(n-1)} ${H} Z` : '';
+  const dots = weights.map((w, i) => `<circle class="chart-dot ${i === n-1 ? 'latest' : ''}" cx="${x(i).toFixed(1)}" cy="${y(w.val).toFixed(1)}" r="${i === n-1 ? 6 : 4}"/>`).join('');
+  document.getElementById('weight-svg').innerHTML = `
+    <defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1D9E75" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#1D9E75" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${areaPath ? `<path class="chart-area" d="${areaPath}"/>` : ''}
+    ${linePath ? `<path class="chart-line" d="${linePath}"/>` : ''}
+    ${dots}
+  `;
+
+  const rev = [...weights].reverse();
+  listEl.innerHTML = rev.map((w, i) => {
+    const prev = rev[i + 1];
+    let delta = '';
+    if (prev) {
+      const diff = (w.val - prev.val).toFixed(2);
+      delta = diff > 0 ? `<span class="w-delta w-up">+${diff}kg</span>` : diff < 0 ? `<span class="w-delta w-down">${diff}kg</span>` : '';
+    }
+    const d = new Date(w.date);
+    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `<div class="w-row"><span class="w-date">${label}</span><span class="w-val">${w.val.toFixed(1)} kg ${delta}</span></div>`;
+  }).join('');
+}
+
+// ─── VET ──────────────────────────────────────────────────────────────────
+function renderVet() {
+  const cat = getCat();
+  document.getElementById('vet-title').textContent = cat.name;
+  const listEl = document.getElementById('vet-list');
+  if (!cat.vets.length) {
+    listEl.innerHTML = '<div class="empty"><div class="empty-icon">💉</div>No vet appointments added yet.</div>';
+    return;
+  }
+  listEl.innerHTML = cat.vets.map(v => `
+    <div class="vet-card-big" style="margin-bottom:10px;">
+      <div class="vet-card-header">
+        <div class="vet-avatar">${v.icon}</div>
+        <div>
+          <div class="vet-title">${v.name}</div>
+          <div class="vet-subtitle">${v.doctor}</div>
+        </div>
+      </div>
+      <div class="vet-meta">
+        <div class="vet-meta-item">
+          <div class="vet-meta-label">Date</div>
+          <div class="vet-meta-val">${v.date}</div>
+        </div>
+        <div class="vet-meta-item">
+          <div class="vet-meta-label">In</div>
+          <div class="vet-meta-val">${v.daysLeft} days</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── SETTINGS ─────────────────────────────────────────────────────────────
+function renderSettings() {
+  const cat = getCat();
+  document.getElementById('settings-cat-name').textContent = cat.name;
+  const bday = new Date(cat.birthday);
+  const age = Math.floor((new Date() - bday) / (365.25 * 24 * 3600 * 1000));
+  document.getElementById('settings-breed').textContent = cat.breed + ' · ' + age + ' years old';
+  document.getElementById('s-name').textContent = cat.name;
+  document.getElementById('s-breed').textContent = cat.breed;
+  document.getElementById('s-bday').textContent = bday.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  document.getElementById('s-food').textContent = cat.food || 'Dry food';
+  const avatarEl = document.getElementById('settings-avatar');
+  if (cat.photo) {
+    avatarEl.innerHTML = `<img src="${cat.photo}" alt="${cat.name}">`;
+  } else {
+    avatarEl.innerHTML = '🐱';
+  }
+}
+
+function triggerPhotoUpload() {
+  document.getElementById('photo-input').click();
+}
+
+function handlePhotoUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const cat = getCat();
+    cat.photo = ev.target.result;
+    save();
+    renderSettings();
+    renderAll();
+    showToast('Photo saved!');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ─── MODALS ───────────────────────────────────────────────────────────────
+function openAddModal() { document.getElementById('add-modal').classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openSwitcher() {
+  const list = document.getElementById('cat-switcher-list');
+  list.innerHTML = state.cats.map((c, i) => `
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="option-btn" style="flex:1;" onclick="switchCat(${i})">
+        <span class="option-icon" style="width:28px;height:28px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--green-light);font-size:16px;">${c.photo ? `<img src="${c.photo}" style="width:100%;height:100%;object-fit:cover;">` : '🐱'}</span>
+        ${c.name} ${i === state.activeCat ? '✓' : ''}
+      </button>
+      <button onclick="confirmDeleteCat(${i})" style="background:var(--coral-light);color:var(--coral);border:none;border-radius:10px;padding:10px 12px;font-size:16px;cursor:pointer;flex-shrink:0;">🗑</button>
+    </div>`).join('');
+  document.getElementById('switcher-modal').classList.add('open');
+}
+function switchCat(i) {
+  state.activeCat = i;
+  closeModal('switcher-modal');
+  renderAll();
+  showToast('Switched to ' + getCat().name);
+}
+
+function confirmDeleteCat(i) {
+  const cat = state.cats[i];
+  if (!cat) return;
+  if (state.cats.length === 1) {
+    // Last cat — warn before deleting
+    if (!confirm('Delete ' + cat.name + '? This will remove all their data and cannot be undone.')) return;
+    deleteCat(i);
+    state.onboardingDone = false;
+    save();
+    closeModal('switcher-modal');
+    // Skip lang picker for returning users — go straight to cat setup
+    document.getElementById('onboarding-modal').classList.add('open');
+    return;
+  }
+  if (!confirm('Delete ' + cat.name + '? All their data will be permanently removed.')) return;
+  deleteCat(i);
+  closeModal('switcher-modal');
+  renderAll();
+  showToast(cat.name + ' removed');
+}
+
+function deleteCat(i) {
+  state.cats.splice(i, 1);
+  if (state.activeCat >= state.cats.length) state.activeCat = Math.max(0, state.cats.length - 1);
+  save();
+}
+function openAddCatForm() {
+  closeModal('switcher-modal');
+  document.getElementById('addcat-modal').classList.add('open');
+}
+function addNewCat() {
+  const name = document.getElementById('new-cat-name').value.trim();
+  const breed = document.getElementById('new-cat-breed').value.trim();
+  const bday = document.getElementById('new-cat-bday').value;
+  if (!name) { showToast('Enter a name first'); return; }
+  state.cats.push({ id: state.nextId++, name, breed: breed || 'Mixed', birthday: bday || '2023-01-01', food: 'Dry food', streak: 0, logs: [], weights: [], vets: [], gallery: [], photo: '' });
+  state.activeCat = state.cats.length - 1;
+  save();
+  closeModal('addcat-modal');
+  renderAll();
+  showToast(name + ' added! 🐱');
+}
+
+// ─── ENTRY FORMS ──────────────────────────────────────────────────────────
+const formTitles = { feed: 'Log feeding', mood: 'Log mood', weight: 'Log weight', vet: 'Add vet visit', note: 'Add note' };
+function openEntryForm(type) {
+  closeModal('add-modal');
+  document.getElementById('entry-form-title').textContent = formTitles[type];
+  const body = document.getElementById('entry-form-body');
+  if (type === 'feed') {
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">Meal type</label>
+        <select class="form-input" id="ef-meal"><option>Morning meal</option><option>Evening meal</option><option>Snack</option><option>Treats</option></select></div>
+      <div class="form-group"><label class="form-label">Amount</label>
+        <input class="form-input" id="ef-amount" type="text" placeholder="e.g. 50g dry food"></div>
+      <button class="save-btn" onclick="saveEntry('feed')">Save</button>`;
+  } else if (type === 'mood') {
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">Mood</label>
+        <select class="form-input" id="ef-mood">
+          <option value="😄 Happy">😄 Happy</option>
+          <option value="😐 Calm">😐 Calm</option>
+          <option value="😴 Sleepy">😴 Sleepy</option>
+          <option value="😟 Unwell">😟 Unwell</option>
+          <option value="😾 Grumpy">😾 Grumpy</option>
+        </select></div>
+      <div class="form-group"><label class="form-label">Note (optional)</label>
+        <input class="form-input" id="ef-note" type="text" placeholder="e.g. was very playful"></div>
+      <button class="save-btn" onclick="saveEntry('mood')">Save</button>`;
+  } else if (type === 'weight') {
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">Weight (kg)</label>
+        <input class="form-input" id="ef-weight" type="number" step="0.01" placeholder="e.g. 3.80"></div>
+      <button class="save-btn" onclick="saveEntry('weight')">Save</button>`;
+  } else if (type === 'vet') {
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">Appointment name</label>
+        <input class="form-input" id="ef-vet-name" type="text" placeholder="e.g. Annual checkup"></div>
+      <div class="form-group"><label class="form-label">Date</label>
+        <input class="form-input" id="ef-vet-date" type="date"></div>
+      <div class="form-group"><label class="form-label">Doctor / Clinic</label>
+        <input class="form-input" id="ef-vet-doc" type="text" placeholder="e.g. Dr. Rahman"></div>
+      <button class="save-btn" onclick="saveEntry('vet')">Save</button>`;
+  } else {
+    body.innerHTML = `
+      <div class="form-group"><label class="form-label">Note</label>
+        <input class="form-input" id="ef-note-text" type="text" placeholder="e.g. Refilled water bowl"></div>
+      <button class="save-btn" onclick="saveEntry('note')">Save</button>`;
+  }
+  document.getElementById('entry-modal').classList.add('open');
+}
+
+function saveEntry(type) {
+  const cat = getCat();
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  let entry = null;
+  if (type === 'feed') {
+    const meal = document.getElementById('ef-meal').value;
+    const amt = document.getElementById('ef-amount').value || '50g food';
+    entry = { id: state.nextId++, type: 'feed', label: meal, detail: amt, time: 'Today · ' + timeStr, ts: now.getTime() };
+    cat.streak = (cat.streak || 0) + 1;
+  } else if (type === 'mood') {
+    const mood = document.getElementById('ef-mood').value;
+    const note = document.getElementById('ef-note').value;
+    entry = { id: state.nextId++, type: 'mood', label: 'Mood: ' + mood.split(' ')[1], detail: mood + (note ? ' · ' + note : ''), time: 'Today · ' + timeStr, ts: now.getTime() };
+  } else if (type === 'weight') {
+    const w = parseFloat(document.getElementById('ef-weight').value);
+    if (isNaN(w)) { showToast('Enter a valid weight'); return; }
+    entry = { id: state.nextId++, type: 'weight', label: 'Weight logged', detail: w.toFixed(2) + ' kg', time: 'Today · ' + timeStr, ts: now.getTime() };
+    cat.weights.push({ date: now.toISOString().slice(0,10), val: w });
+  } else if (type === 'vet') {
+    const name = document.getElementById('ef-vet-name').value.trim();
+    const date = document.getElementById('ef-vet-date').value;
+    const doc = document.getElementById('ef-vet-doc').value.trim() || 'Vet';
+    if (!name || !date) { showToast('Fill in name and date'); return; }
+    const daysLeft = Math.round((new Date(date) - now) / (24*3600*1000));
+    cat.vets.push({ name, date, doctor: doc, icon: '💉', daysLeft });
+    cat.vets.sort((a,b) => a.daysLeft - b.daysLeft);
+    entry = { id: state.nextId++, type: 'vet', label: name, detail: doc, time: 'Today · ' + timeStr, ts: now.getTime() };
+  } else {
+    const note = document.getElementById('ef-note-text').value.trim();
+    if (!note) { showToast('Enter a note'); return; }
+    entry = { id: state.nextId++, type: 'note', label: 'Note', detail: note, time: 'Today · ' + timeStr, ts: now.getTime() };
+  }
+  if (entry) cat.logs.unshift(entry);
+  save();
+  closeModal('entry-modal');
+  renderAll();
+  showToast('Saved!');
+}
+
+function logEntry(entry) {
+  const cat = getCat();
+  entry.id = state.nextId++;
+  entry.ts = entry.ts || Date.now();
+  entry.time = entry.time || 'Today';
+  cat.logs.unshift(entry);
+  save();
+}
+
+// ─── BREED PHOTO HELPER ───────────────────────────────────────────────────
+function getBreedPhoto(n) {
+  if (state.breedPhotos && state.breedPhotos[n]) return state.breedPhotos[n];
+  const custom = (state.customBreeds || []).find(b => b.name === n);
+  if (custom && custom.photo) return custom.photo;
+  return '';
+}
+
+// Generate a unique breed SVG cat portrait - works offline, instant, no network
+function breedSVG(name, size) {
+  const sz = size || 54;
+  // Hash breed name to pick consistent colors
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
+  const palettes = [
+    {bg:'#F5E6C8',body:'#C8956B',stripe:'#A07040',eye:'#3A8B5F',nose:'#E89090'},
+    {bg:'#E8F0F0',body:'#8090A0',stripe:'#607080',eye:'#4169E1',nose:'#D4A0B0'},
+    {bg:'#F0E8D8',body:'#9B7355',stripe:'#7A5535',eye:'#2E8B57',nose:'#E8A8A8'},
+    {bg:'#F8F0F8',body:'#C4A4C4',stripe:'#A080A0',eye:'#9932CC',nose:'#F0A0B0'},
+    {bg:'#E8F8E8',body:'#78A878',stripe:'#568056',eye:'#CD853F',nose:'#E8A0A0'},
+    {bg:'#F8F0E8',body:'#D4A060',stripe:'#A07838',eye:'#8B4513',nose:'#E09090'},
+    {bg:'#E8E8F8',body:'#9090C0',stripe:'#6868A0',eye:'#4682B4',nose:'#D0A0C0'},
+    {bg:'#F0F8F0',body:'#A0C0A0',stripe:'#78A078',eye:'#8B6914','nose':'#E0A0A0'},
+    {bg:'#F8E8E8',body:'#C09090',stripe:'#A07070',eye:'#5F9EA0',nose:'#F0A0A8'},
+    {bg:'#E8F8F8',body:'#80B0B0',stripe:'#609090',eye:'#FF6B35',nose:'#D0A8B0'},
+  ];
+  const p = palettes[Math.abs(h) % palettes.length];
+  const r = sz / 2;
+  const cx = r, cy = r;
+  // Ear positions
+  const earL = `M ${cx-r*0.45} ${cy-r*0.55} L ${cx-r*0.7} ${cy-r*0.9} L ${cx-r*0.15} ${cy-r*0.7} Z`;
+  const earR = `M ${cx+r*0.45} ${cy-r*0.55} L ${cx+r*0.7} ${cy-r*0.9} L ${cx+r*0.15} ${cy-r*0.7} Z`;
+  const innerEarL = `M ${cx-r*0.42} ${cy-r*0.58} L ${cx-r*0.62} ${cy-r*0.82} L ${cx-r*0.2} ${cy-r*0.68} Z`;
+  const innerEarR = `M ${cx+r*0.42} ${cy-r*0.58} L ${cx+r*0.62} ${cy-r*0.82} L ${cx+r*0.2} ${cy-r*0.68} Z`;
+  const eyeY = cy - r*0.08;
+  const eyeRx = r*0.14, eyeRy = r*0.11;
+  const noseY = cy + r*0.18;
+  const mouthY = cy + r*0.28;
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${sz}' height='${sz}' viewBox='0 0 ${sz} ${sz}'>
+    <rect width='${sz}' height='${sz}' rx='${sz*0.26}' fill='${p.bg}'/>
+    <path d='${earL}' fill='${p.body}'/>
+    <path d='${earR}' fill='${p.body}'/>
+    <path d='${innerEarL}' fill='${p.nose}' opacity='0.6'/>
+    <path d='${innerEarR}' fill='${p.nose}' opacity='0.6'/>
+    <circle cx='${cx}' cy='${cy+r*0.05}' r='${r*0.62}' fill='${p.body}'/>
+    <ellipse cx='${cx-r*0.22}' cy='${eyeY}' rx='${eyeRx}' ry='${eyeRy}' fill='${p.eye}'/>
+    <ellipse cx='${cx+r*0.22}' cy='${eyeY}' rx='${eyeRx}' ry='${eyeRy}' fill='${p.eye}'/>
+    <ellipse cx='${cx-r*0.22}' cy='${eyeY}' rx='${eyeRx*0.45}' ry='${eyeRy*0.85}' fill='#1a1a1a'/>
+    <ellipse cx='${cx+r*0.22}' cy='${eyeY}' rx='${eyeRx*0.45}' ry='${eyeRy*0.85}' fill='#1a1a1a'/>
+    <circle cx='${cx-r*0.19}' cy='${eyeY-eyeRy*0.3}' r='${eyeRx*0.2}' fill='white' opacity='0.8'/>
+    <circle cx='${cx+r*0.19}' cy='${eyeY-eyeRy*0.3}' r='${eyeRx*0.2}' fill='white' opacity='0.8'/>
+    <ellipse cx='${cx}' cy='${noseY}' rx='${r*0.1}' ry='${r*0.07}' fill='${p.nose}'/>
+    <path d='M ${cx} ${noseY+r*0.07} L ${cx-r*0.15} ${mouthY} M ${cx} ${noseY+r*0.07} L ${cx+r*0.15} ${mouthY}' stroke='${p.stripe}' stroke-width='${r*0.06}' stroke-linecap='round' fill='none'/>
+    <line x1='${cx-r*0.5}' y1='${noseY-r*0.02}' x2='${cx-r*0.25}' y2='${noseY+r*0.02}' stroke='${p.stripe}' stroke-width='${r*0.05}' opacity='0.5'/>
+    <line x1='${cx+r*0.5}' y1='${noseY-r*0.02}' x2='${cx+r*0.25}' y2='${noseY+r*0.02}' stroke='${p.stripe}' stroke-width='${r*0.05}' opacity='0.5'/>
+  </svg>`;
+  return 'data:image/svg+xml;base64,' + btoa(svg);
+}
+
+function breedThumb(name, size) {
+  const src = getBreedPhoto(name);
+  const sz = size || 54;
+  const r = Math.round(sz * 0.26);
+  if (src) {
+    return `<img src="${src}" style="width:${sz}px;height:${sz}px;border-radius:${r}px;object-fit:cover;flex-shrink:0;">`;
+  }
+  return `<div style="width:${sz}px;height:${sz}px;border-radius:${r}px;background:var(--gray2);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+    <span style="font-size:${Math.round(sz*0.38)}px;opacity:0.4;">📷</span>
+  </div>`;
+}
+
+function breedHeroThumb(name) {
+  const src = getBreedPhoto(name);
+  if (src) {
+    return `<img src="${src}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.4);margin-bottom:10px;">`;
+  }
+  return `<div style="width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.15);border:3px dashed rgba(255,255,255,0.4);display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:10px;gap:4px;">
+    <span style="font-size:32px;">📷</span>
+    <span style="font-size:11px;color:rgba(255,255,255,0.8);font-weight:600;">Be first to add</span>
+  </div>`;
+}
+
+// ─── PREMIUM ──────────────────────────────────────────────────────────────
+function isPremium() {
+  if (!state.premium) return false;
+  if (state.premiumType === 'lifetime') return true;
+  if (state.premiumExpiry && Date.now() > state.premiumExpiry) {
+    state.premium = false; save(); return false;
+  }
+  return true;
+}
+
+let selectedPlan = 'monthly';
+
+function selectPlan(plan) {
+  selectedPlan = plan;
+  const mEl = document.getElementById('plan-monthly');
+  const lEl = document.getElementById('plan-lifetime');
+  const btn = document.getElementById('sub-main-btn');
+  if (!mEl || !lEl || !btn) return;
+  if (plan === 'monthly') {
+    mEl.style.border = '2px solid var(--green)'; mEl.style.background = 'var(--green-light)';
+    lEl.style.border = '2px solid var(--gray2)'; lEl.style.background = 'var(--white)';
+    btn.textContent = '🐾 Unlock Premium — $0.99/mo';
+  } else {
+    lEl.style.border = '2px solid var(--green)'; lEl.style.background = 'var(--green-light)';
+    mEl.style.border = '2px solid var(--gray2)'; mEl.style.background = 'var(--white)';
+    btn.textContent = '🐾 Get Lifetime — $4.99';
+  }
+}
+
+function applyPromo() {
+  const code = (document.getElementById('promo-input').value || '').trim().toUpperCase();
+  const resultEl = document.getElementById('promo-result');
+  const PROMOS = {
+    'WELCOME': { months: 8, expires: new Date('2026-06-26').getTime(), label: '8 months free!' },
+    'PAWLOG50': { months: 6, expires: new Date('2026-12-31').getTime(), label: '6 months free!' },
+  };
+  const promo = PROMOS[code];
+  if (!promo) {
+    resultEl.style.color = 'var(--coral)';
+    resultEl.textContent = '❌ Invalid promo code';
+    return;
+  }
+  if (Date.now() > promo.expires) {
+    resultEl.style.color = 'var(--coral)';
+    resultEl.textContent = '❌ This promo code has expired';
+    return;
+  }
+  // Apply promo
+  const expiry = Date.now() + promo.months * 30 * 24 * 3600 * 1000;
+  state.premium = true;
+  state.premiumType = 'monthly';
+  state.premiumExpiry = expiry;
+  save();
+  resultEl.style.color = 'var(--green)';
+  resultEl.textContent = '✅ ' + promo.label + ' Applied!';
+  setTimeout(() => {
+    closeModal('sub-modal');
+    document.getElementById('premium-badge-top').style.display = 'block';
+    showToast('🎉 ' + promo.label + ' Enjoy Premium!');
+    updatePremiumUI();
+  }, 1200);
+}
+
+function activatePremium() {
+  const expiry = selectedPlan === 'lifetime' ? null : Date.now() + 30 * 24 * 3600 * 1000;
+  state.premium = true;
+  state.premiumType = selectedPlan;
+  state.premiumExpiry = expiry;
+  save();
+  closeModal('sub-modal');
+  document.getElementById('premium-badge-top').style.display = 'block';
+  showToast(selectedPlan === 'lifetime' ? '⭐ Lifetime Premium unlocked!' : '⭐ Premium unlocked!');
+  updatePremiumUI();
+  renderSocial();
+}
+
+function updatePremiumUI() {
+  const badge = document.getElementById('premium-badge-top');
+  if (badge) badge.style.display = isPremium() ? 'block' : 'none';
+  const lbl = document.getElementById('premium-settings-label');
+  if (lbl) lbl.textContent = isPremium() ? (state.premiumType === 'lifetime' ? '⭐ Lifetime Premium' : '⭐ Premium Active') : 'Upgrade to Premium';
+  // Show/hide ad banner
+  const ad = document.getElementById('ad-banner');
+  if (ad) ad.style.display = isPremium() ? 'none' : 'flex';
+}
+
+function requirePremium(action) {
+  if (isPremium()) { action(); return; }
+  selectedPlan = 'monthly';
+  document.getElementById('sub-modal').classList.add('open');
+}
+
+// ─── SOCIAL ───────────────────────────────────────────────────────────────
+let palPhotoData = null;
+
+function getDefaultPals() {
+  return [];
+}
+function getDefaultPosts() {
+  return [];
+}
+
+function renderSocial() {
+  if (!state.pals) state.pals = getDefaultPals();
+  if (!state.posts) state.posts = getDefaultPosts();
+  if (isPremium()) document.getElementById('premium-badge-top').style.display = 'block';
+  showSocialTab('feed');
+}
+
+function showSocialTab(tab) {
+  ['feed','friends','add'].forEach(t => {
+    document.getElementById('social-' + t + '-section').style.display = t === tab ? 'block' : 'none';
+    document.getElementById('stab-' + t).classList.toggle('active-stab', t === tab);
+  });
+  if (tab === 'feed') renderFeed();
+  if (tab === 'friends') renderFriends();
+  if (tab === 'add') renderAddSection();
+}
+
+// ── FEED ──────────────────────────────────────────────────────────────────
+function renderFeed() {
+  const cat = getCat();
+  const feedEl = document.getElementById('social-feed');
+  const avatarHtml = cat.photo
+    ? `<img src="${cat.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">`
+    : `<div style="width:40px;height:40px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:18px;">🐱</div>`;
+
+  const postBox = isPremium() ? `
+    <div class="feed-post" style="margin-bottom:10px;">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
+        ${avatarHtml}
+        <input id="new-post-text" class="form-input" type="text" placeholder="What's ${cat.name} up to?" style="flex:1;font-size:13px;padding:8px 12px;">
+      </div>
+      <button onclick="postUpdate()" style="background:var(--green);color:#fff;border:none;border-radius:10px;padding:9px;font-size:13px;font-weight:600;font-family:var(--font-body);cursor:pointer;width:100%;">Post update 🐾</button>
+    </div>` : `
+    <div class="lock-banner">
+      <div class="lock-banner-title">⭐ Premium Feed</div>
+      <div class="lock-banner-sub">Post updates and interact with the community</div>
+      <button class="unlock-btn" onclick="document.getElementById('sub-modal').classList.add('open')">Unlock Premium</button>
+    </div>`;
+
+  feedEl.innerHTML = postBox + state.posts.slice().reverse().map(p => {
+    const pal = state.pals.find(pl => pl.id === p.palId);
+    const photo = p.isMe ? (cat.photo || '') : (pal ? pal.photo : '');
+    const av = photo
+      ? `<img class="post-avatar" src="${photo}" onerror="this.style.display='none'">`
+      : `<div class="post-avatar-placeholder">🐱</div>`;
+    return `<div class="feed-post">
+      <div class="post-header" onclick="${!p.isMe && pal ? `openPalProfile(${p.palId})` : ''}" style="cursor:${!p.isMe ? 'pointer' : 'default'}">
+        ${av}
+        <div>
+          <div class="post-cat-name">${p.catName}</div>
+          <div class="post-time">${p.time}</div>
+        </div>
+      </div>
+      <div class="post-content">${p.text}</div>
+      <div class="post-actions">
+        <button class="post-btn ${p.liked ? 'active' : ''}" onclick="likePost(${p.id})">❤️ ${p.likes}</button>
+        ${!p.isMe && pal ? `<button class="post-btn" onclick="requirePremium(()=>openChat(${p.palId}))">💬 Message</button>` : ''}
+        <button class="post-btn" onclick="toggleComments(${p.id})">🗨️ ${(p.comments||[]).length}</button>
+      </div>
+      <div id="comments-${p.id}" style="display:none;margin-top:10px;border-top:1px solid var(--gray2);padding-top:8px;">
+        ${(p.comments||[]).map(c=>`
+          <div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;">
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">🐱</div>
+            <div style="flex:1;background:var(--gray);border-radius:10px;padding:7px 10px;">
+              <div style="font-size:12px;font-weight:600;margin-bottom:2px;">${c.author}</div>
+              <div style="font-size:13px;color:var(--text2);">${c.text}</div>
+            </div>
+          </div>`).join('')}
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <input id="comment-input-${p.id}" class="form-input" type="text" placeholder="Add a comment..." style="flex:1;font-size:13px;padding:7px 12px;">
+          <button onclick="addComment(${p.id})" style="background:var(--green);color:#fff;border:none;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:600;font-family:var(--font-body);cursor:pointer;">Post</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function postUpdate() {
+  const cat = getCat();
+  const text = document.getElementById('new-post-text').value.trim();
+  if (!text) { showToast('Write something first!'); return; }
+  state.posts.push({ id:state.nextId++, palId:0, catName:cat.name, isMe:true, text, time:'Just now', likes:0, liked:false });
+  save(); document.getElementById('new-post-text').value = '';
+  renderFeed(); showToast('Posted! 🐾');
+}
+
+function likePost(id) {
+  const p = state.posts.find(p => p.id === id);
+  if (!p) return;
+  p.liked = !p.liked; p.likes += p.liked ? 1 : -1;
+  save(); renderFeed();
+}
+
+function toggleComments(id) {
+  const el = document.getElementById('comments-' + id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function addComment(postId) {
+  const cat = getCat();
+  const input = document.getElementById('comment-input-' + postId);
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  const post = state.posts.find(p => p.id === postId);
+  if (!post) return;
+  if (!post.comments) post.comments = [];
+  post.comments.push({ author: cat.name, text, time: new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) });
+  save();
+  renderFeed();
+  // Re-open the comments section after re-render
+  setTimeout(() => {
+    const el = document.getElementById('comments-' + postId);
+    if (el) el.style.display = 'block';
+  }, 50);
+  showToast('Comment added!');
+}
+
+// ── FRIENDS ───────────────────────────────────────────────────────────────
+function renderFriends() {
+  const el = document.getElementById('social-friends-list');
+  if (!state.pals.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🐾</div>No pals yet</div>'; return;
+  }
+  el.innerHTML = state.pals.map(p => {
+    const av = p.photo
+      ? `<img class="pal-avatar" src="${p.photo}" onerror="this.style.display='none'">`
+      : `<div class="pal-avatar-placeholder">🐱</div>`;
+    const unread = (p.messages || []).filter(m => m.from === 'them' && !m.read).length;
+    return `<div class="pal-card" onclick="openPalProfile(${p.id})" style="cursor:pointer;">
+      <div class="pal-header">
+        <div style="position:relative;">
+          ${av}
+          ${unread ? `<div style="position:absolute;top:-2px;right:-2px;width:16px;height:16px;background:var(--coral);border-radius:50%;font-size:10px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">${unread}</div>` : ''}
+        </div>
+        <div style="flex:1;">
+          <div class="pal-name">${p.catName}</div>
+          <div class="pal-owner">Owner: ${p.ownerName}</div>
+          <span class="pal-breed-tag">${p.breed}</span>
+        </div>
+        <div style="font-size:20px;color:var(--text3);">›</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── ADD SECTION ───────────────────────────────────────────────────────────
+function renderAddSection() {
+  const el = document.getElementById('social-add-content');
+  if (!isPremium()) {
+    el.innerHTML = `<div class="lock-banner" style="margin-top:8px;">
+      <div style="font-size:40px;margin-bottom:8px;">🔒</div>
+      <div class="lock-banner-title">Premium Feature</div>
+      <div class="lock-banner-sub">Add unlimited pal profiles with Premium</div>
+      <button class="unlock-btn" onclick="document.getElementById('sub-modal').classList.add('open')">Unlock — $0.99/mo</button>
+    </div>
+    <div style="margin-top:12px;">
+      <div class="section-label" style="margin-bottom:8px;">Preview — your pals</div>
+      ${state.pals.map(p => {
+        const av = p.photo ? `<img class="pal-avatar" src="${p.photo}" onerror="this.style.display='none'">` : `<div class="pal-avatar-placeholder">🐱</div>`;
+        return `<div class="pal-card" style="opacity:0.6;pointer-events:none;"><div class="pal-header">${av}<div><div class="pal-name">${p.catName}</div><div class="pal-owner">${p.ownerName}</div></div></div></div>`;
+      }).join('')}
+    </div>`; return;
+  }
+  el.innerHTML = `<div class="card" style="margin-bottom:10px;margin-top:8px;">
+    <div style="font-size:14px;font-weight:500;margin-bottom:14px;">Add a cat pal</div>
+    <div class="form-group"><label class="form-label">Cat's name</label><input class="form-input" id="pal-cat-name" type="text" placeholder="e.g. Luna"></div>
+    <div class="form-group"><label class="form-label">Owner's name</label><input class="form-input" id="pal-owner-name" type="text" placeholder="e.g. Sarah"></div>
+    <div class="form-group"><label class="form-label">Breed</label><input class="form-input" id="pal-breed" type="text" placeholder="e.g. Siamese"></div>
+    <div class="form-group"><label class="form-label">Fun fact</label><input class="form-input" id="pal-fact" type="text" placeholder="e.g. Loves chasing laser pointers"></div>
+    <div class="form-group">
+      <label class="form-label">Photo</label>
+      <div id="pal-photo-preview" style="width:70px;height:70px;border-radius:50%;background:var(--gray2);margin-bottom:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:28px;">🐱</div>
+      <input type="file" id="pal-photo-input" accept="image/*" style="display:none" onchange="handlePalPhotoPreview(event)">
+      <button onclick="document.getElementById('pal-photo-input').click()" style="background:var(--gray);border:1px solid var(--gray2);border-radius:10px;padding:8px 14px;font-size:13px;font-family:var(--font-body);cursor:pointer;color:var(--text2);">📷 Choose photo</button>
+    </div>
+    <button class="save-btn" onclick="addPal()">Add pal</button>
+  </div>`;
+}
+
+function handlePalPhotoPreview(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    palPhotoData = ev.target.result;
+    document.getElementById('pal-photo-preview').innerHTML = `<img src="${palPhotoData}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function addPal() {
+  const catName = document.getElementById('pal-cat-name').value.trim();
+  const ownerName = document.getElementById('pal-owner-name').value.trim();
+  if (!catName || !ownerName) { showToast('Cat name and owner required'); return; }
+  const breed = document.getElementById('pal-breed').value.trim() || 'Mixed';
+  const fact = document.getElementById('pal-fact').value.trim() || 'Loves napping';
+  const newPal = { id:state.nextId++, catName, ownerName, breed, fact, photo:palPhotoData||'', likes:0, liked:false, messages:[] };
+  state.pals.push(newPal);
+  state.posts.push({ id:state.nextId++, palId:newPal.id, catName, isMe:false, text:`${catName} just joined Paw Pals! 🎉 Say hello!`, time:'Just now', likes:0, liked:false });
+  palPhotoData = null;
+  save(); showToast(catName + ' added! 🐾');
+  showSocialTab('friends');
+}
+
+function likePal(id) {
+  const p = state.pals.find(p => p.id === id); if (!p) return;
+  p.liked = !p.liked; p.likes = (p.likes||0) + (p.liked?1:-1);
+  save(); openPalProfile(id);
+}
+
+function removePal(id) {
+  state.pals = state.pals.filter(p => p.id !== id);
+  save(); switchTab('social'); showToast('Pal removed');
+}
+
+// ── PAL PROFILE ───────────────────────────────────────────────────────────
+function openPalProfile(palId) {
+  const pal = state.pals.find(p => p.id === palId); if (!pal) return;
+  state.activeChatPalId = palId;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-pal-profile').classList.add('active');
+  document.getElementById('fab-btn').style.display = 'none';
+  buildNavs();
+  document.getElementById('pal-profile-name').textContent = pal.catName;
+  const av = pal.photo
+    ? `<img src="${pal.photo}" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--green-light);">`
+    : `<div style="width:100px;height:100px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:48px;">🐱</div>`;
+  const palPosts = state.posts.filter(p => p.palId === palId);
+  document.getElementById('pal-profile-content').innerHTML = `
+    <div style="text-align:center;padding:20px 0 14px;">
+      ${av}
+      <div style="font-family:var(--font-display);font-size:22px;margin-top:10px;">${pal.catName}</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:2px;">Owner: ${pal.ownerName}</div>
+      <span class="pal-breed-tag" style="margin-top:6px;display:inline-block;">${pal.breed}</span>
+    </div>
+    <div class="card" style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">About</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;">💭 "${pal.fact}"</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button onclick="requirePremium(()=>openChat(${palId}))" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:600;font-family:var(--font-body);cursor:pointer;">💬 Message ${pal.catName}</button>
+      <button onclick="likePal(${palId})" style="background:${pal.liked?'var(--coral-light)':'var(--gray)'};color:${pal.liked?'var(--coral)':'var(--text2)'};border:none;border-radius:12px;padding:12px 16px;font-size:16px;cursor:pointer;">❤️</button>
+      <button onclick="removePal(${palId})" style="background:var(--gray);color:var(--text2);border:none;border-radius:12px;padding:12px 14px;font-size:14px;cursor:pointer;">🗑</button>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">${palPosts.length} Posts</div>
+    ${palPosts.length ? palPosts.reverse().map(p => `
+      <div class="feed-post" style="margin-bottom:10px;">
+        <div style="font-size:14px;color:var(--text2);line-height:1.5;">${p.text}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px;">${p.time} · ❤️ ${p.likes}</div>
+      </div>`).join('') : `<div class="empty" style="padding:20px;"><div class="empty-icon">📝</div>No posts yet</div>`}
+    <div style="height:16px;"></div>`;
+}
+
+// ── CHAT ──────────────────────────────────────────────────────────────────
+function openChat(palId) {
+  const pal = state.pals.find(p => p.id === palId); if (!pal) return;
+  state.activeChatPalId = palId;
+  (pal.messages || []).forEach(m => m.read = true);
+  save();
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-chat').classList.add('active');
+  document.getElementById('fab-btn').style.display = 'none';
+  buildNavs();
+  document.getElementById('chat-pal-name').textContent = pal.catName;
+  const av = document.getElementById('chat-pal-avatar');
+  av.innerHTML = pal.photo ? `<img src="${pal.photo}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">` : '🐱';
+  renderChatMessages(pal);
+  setTimeout(() => {
+    const msgs = document.getElementById('chat-messages');
+    msgs.scrollTop = msgs.scrollHeight;
+  }, 50);
+}
+
+function renderChatMessages(pal) {
+  const msgs = document.getElementById('chat-messages');
+  if (!pal.messages || !pal.messages.length) {
+    msgs.innerHTML = `<div style="text-align:center;padding:30px 16px;color:var(--text3);font-size:13px;">Send ${pal.catName} a message! 🐾</div>`; return;
+  }
+  msgs.innerHTML = pal.messages.map(m => `
+    <div class="msg-wrap-${m.from === 'me' ? 'me' : 'them'}">
+      <div class="msg-bubble msg-${m.from === 'me' ? 'me' : 'them'}">${m.text}</div>
+      <div class="msg-time">${m.time}</div>
+    </div>`).join('');
+}
+
+function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim(); if (!text) return;
+  const pal = state.pals.find(p => p.id === state.activeChatPalId); if (!pal) return;
+  if (!pal.messages) pal.messages = [];
+  const now = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  pal.messages.push({ from:'me', text, time:now, read:true });
+  input.value = '';
+  save(); renderChatMessages(pal);
+  const msgs = document.getElementById('chat-messages');
+  msgs.scrollTop = msgs.scrollHeight;
+  // auto-reply after 1.5s
+  setTimeout(() => {
+    const replies = ['Meow! 🐾','Purrrr...','*knocks your water off the table*','I require treats immediately.','Zzzz... 😴','MEOW MEOW MEOW','*stares intensely*','I approve of this message.'];
+    pal.messages.push({ from:'them', text:replies[Math.floor(Math.random()*replies.length)], time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}), read:true });
+    save(); renderChatMessages(pal);
+    msgs.scrollTop = msgs.scrollHeight;
+  }, 1500);
+}
+
+// ─── CALENDAR ─────────────────────────────────────────────────────────────
+const EV_ICONS = { vet:'💉', feed:'🍽️', med:'💊', groom:'✂️', other:'📌' };
+let calFilter = 'all';
+
+function renderCalendar() {
+  if (!state.events) state.events = getDefaultEvents();
+  const banner = document.getElementById('notif-banner');
+  if (banner) banner.style.display = ('Notification' in window && Notification.permission === 'default') ? 'flex' : 'none';
+  filterCal(calFilter);
+}
+
+function getDefaultEvents() {
+  return [];
+}
+
+function filterCal(type) {
+  calFilter = type;
+  ['all','vet','feed','med','groom'].forEach(t => {
+    const el = document.getElementById('cf-' + t);
+    if (el) el.classList.toggle('active-stab', t === type);
+  });
+  renderEventsList();
+}
+
+function renderEventsList() {
+  const events = (state.events || [])
+    .filter(e => calFilter === 'all' || e.type === calFilter)
+    .sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
+  const el = document.getElementById('calendar-events-list');
+  const countEl = document.getElementById('cal-count');
+  if (countEl) countEl.textContent = events.length + ' event' + (events.length !== 1 ? 's' : '');
+  if (!el) return;
+  if (!events.length) {
+    el.innerHTML = `<div class="empty" style="padding:40px 0;"><div class="empty-icon">📅</div>No events — tap + Add event</div>`;
+    return;
+  }
+  const now = new Date();
+  el.innerHTML = events.map(e => {
+    const evDate = new Date(e.date + 'T' + (e.time||'10:00'));
+    const diffDays = Math.round((evDate - now) / 86400000);
+    let badge, bc;
+    if (diffDays < 0) { badge='Past'; bc='ev-past'; }
+    else if (diffDays === 0) { badge='Today!'; bc='ev-today'; }
+    else if (diffDays <= 3) { badge=diffDays+'d away'; bc='ev-soon'; }
+    else { badge=diffDays+' days'; bc='ev-future'; }
+    const dateStr = evDate.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    const timeStr = e.time ? evDate.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '';
+    return `<div class="ev-card">
+      <div class="ev-icon-wrap ev-icon-${e.type}">${EV_ICONS[e.type]||'📌'}</div>
+      <div class="ev-body">
+        <div class="ev-title">${e.title}</div>
+        <div class="ev-meta">${dateStr}${timeStr?' · '+timeStr:''}${e.doctor?' · '+e.doctor:''}</div>
+        ${e.notes?`<div class="ev-meta" style="font-style:italic;margin-top:2px;">${e.notes}</div>`:''}
+        <span class="ev-countdown ${bc}">${badge}</span>
+        <div class="ev-actions">
+          <button class="ev-btn" onclick="exportEventToCalendar(${e.id})">📲 Add to device calendar</button>
+          <button class="ev-btn" onclick="deleteEvent(${e.id})">🗑 Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddEventModal() {
+  document.getElementById('ev-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('ev-title').value = '';
+  document.getElementById('ev-notes').value = '';
+  document.getElementById('ev-doctor').value = '';
+  document.getElementById('ev-type').value = 'vet';
+  document.getElementById('ev-time').value = '10:00';
+  updateEventTypeUI();
+  document.getElementById('add-event-modal').classList.add('open');
+}
+
+function updateEventTypeUI() {
+  const type = document.getElementById('ev-type').value;
+  const dg = document.getElementById('ev-doctor-group');
+  if (dg) dg.style.display = type === 'vet' ? 'block' : 'none';
+}
+
+function saveEvent() {
+  const title = document.getElementById('ev-title').value.trim();
+  const date = document.getElementById('ev-date').value;
+  if (!title || !date) { showToast('Title and date required'); return; }
+  const ev = { id:state.nextId++, type:document.getElementById('ev-type').value, title, date,
+    time:document.getElementById('ev-time').value||'10:00',
+    doctor:document.getElementById('ev-doctor').value.trim(),
+    notes:document.getElementById('ev-notes').value.trim(),
+    reminder:parseInt(document.getElementById('ev-reminder').value)||60 };
+  if (!state.events) state.events = [];
+  state.events.push(ev);
+  save(); scheduleNotification(ev);
+  closeModal('add-event-modal'); renderEventsList(); renderAll();
+  showToast(title + ' saved! 📅');
+}
+
+function saveEventAndExport() {
+  const title = document.getElementById('ev-title').value.trim();
+  const date = document.getElementById('ev-date').value;
+  if (!title || !date) { showToast('Title and date required'); return; }
+  const ev = { id:state.nextId++, type:document.getElementById('ev-type').value, title, date,
+    time:document.getElementById('ev-time').value||'10:00',
+    doctor:document.getElementById('ev-doctor').value.trim(),
+    notes:document.getElementById('ev-notes').value.trim(),
+    reminder:parseInt(document.getElementById('ev-reminder').value)||60 };
+  if (!state.events) state.events = [];
+  state.events.push(ev);
+  save(); scheduleNotification(ev);
+  closeModal('add-event-modal'); renderEventsList();
+  exportEventToCalendar(ev.id);
+}
+
+function exportEventToCalendar(evId) {
+  const ev = (state.events||[]).find(e => e.id === evId);
+  if (!ev) return;
+  const cat = getCat();
+  const [Y,M,D] = ev.date.split('-');
+  const [hh,mm] = (ev.time||'10:00').split(':');
+  const endHH = String(Math.min(parseInt(hh)+1, 23)).padStart(2,'0');
+  const dtStart = Y+M+D+'T'+hh+mm+'00';
+  const dtEnd   = Y+M+D+'T'+endHH+mm+'00';
+  const stamp = new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+  const desc = [ev.notes, ev.doctor?'Location: '+ev.doctor:'', 'Cat: '+cat.name].filter(Boolean).join('\\n');
+  const ics = [
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//PawLog//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    'UID:pawlog-'+ev.id+'@catlance.netlify.app',
+    'DTSTAMP:'+stamp,
+    'DTSTART:'+dtStart,
+    'DTEND:'+dtEnd,
+    'SUMMARY:'+ev.title+' ('+cat.name+')',
+    'DESCRIPTION:'+desc,
+    'LOCATION:'+(ev.doctor||''),
+    'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:PawLog Reminder: '+ev.title,
+    'TRIGGER:-PT'+(ev.reminder||60)+'M','END:VALARM',
+    'END:VEVENT','END:VCALENDAR'
+  ].join('\r\n');
+  const blob = new Blob([ics],{type:'text/calendar;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = ev.title.replace(/\s+/g,'-')+'.ics';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast('Tap the .ics file → Open with Calendar 📲');
+}
+
+function deleteEvent(id) {
+  state.events = (state.events||[]).filter(e => e.id !== id);
+  save(); renderEventsList(); showToast('Event deleted');
+}
+
+function requestNotifPermission() {
+  if (!('Notification' in window)) { showToast('Notifications not supported on this browser'); return; }
+  Notification.requestPermission().then(p => {
+    if (p === 'granted') { showToast('🔔 Reminders enabled!'); renderCalendar(); (state.events||[]).forEach(scheduleNotification); }
+    else showToast('Reminders blocked in browser settings');
+  });
+}
+
+function scheduleNotification(ev) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const evTime = new Date(ev.date + 'T' + (ev.time||'10:00'));
+  const notifTime = new Date(evTime.getTime() - (ev.reminder||60) * 60000);
+  const ms = notifTime - Date.now();
+  if (ms > 0 && ms < 7*24*3600*1000) {
+    setTimeout(() => { try { new Notification('PawLog 🐱', { body: ev.title + ' — ' + getCat().name }); } catch(e){} }, ms);
+  }
+}
+
+// ─── FOOD ANALYZER ────────────────────────────────────────────────────────
+const DANGER_INGREDIENTS = [
+  {name:'Onion',why:'Destroys red blood cells'},{name:'Garlic',why:'Toxic even small amounts'},
+  {name:'Xylitol',why:'Causes liver failure'},{name:'Grapes',why:'Kidney failure'},
+  {name:'Raisins',why:'Kidney failure'},{name:'Chocolate',why:'Theobromine toxicity'},
+  {name:'Caffeine',why:'Heart damage'},{name:'Alcohol',why:'Liver and brain damage'},
+  {name:'Avocado',why:'Heart damage in cats'},{name:'Chives',why:'Same family as onion'},
+  {name:'Propylene glycol',why:'Damages red blood cells'},{name:'BHA',why:'Possible carcinogen'},
+  {name:'BHT',why:'Possible carcinogen'},{name:'Carrageenan',why:'Linked to gut inflammation'},
+  {name:'Sodium nitrite',why:'Can form carcinogens'},{name:'Artificial colors',why:'Linked to hyperactivity'},
+];
+
+function renderFoodAnalyzer() {
+  const el = document.getElementById('danger-list');
+  if (el) el.innerHTML = DANGER_INGREDIENTS.map(d =>
+    `<span style="background:var(--coral-light);color:var(--coral);font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;" title="${d.why}">${d.name}</span>`
+  ).join('');
+}
+
+function triggerFoodPhoto() { document.getElementById('food-photo-input').click(); }
+
+async function analyzeFoodPhoto(e) {
+  const file = e.target.files[0]; if (!file) return;
+  showFoodLoading('Reading ingredients from photo...');
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    const b64 = ev.target.result.split(',')[1];
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:800,
+          messages:[{role:'user',content:[
+            {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
+            {type:'text',text:'Extract ingredients from this cat food label and analyze safety. Respond ONLY with JSON: {"grade":"B","score":72,"harmful":["carrageenan"],"proteins":["chicken"],"tips":["Good protein source"],"summary":"Decent quality food."}'}
+          ]}]
+        })
+      });
+      const data = await resp.json();
+      showFoodResult(JSON.parse(data.content[0].text.match(/\{[\s\S]*\}/)[0]));
+    } catch(err) { showFoodError(); }
+  };
+  reader.readAsDataURL(file); e.target.value = '';
+}
+
+async function analyzeFood() {
+  const input = document.getElementById('food-input').value.trim();
+  if (!input) { showToast('Paste some ingredients first'); return; }
+  showFoodLoading('Analyzing with AI...');
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:600,
+        messages:[{role:'user',content:`Analyze these cat food ingredients. Respond ONLY with JSON: {"grade":"B","score":72,"harmful":["carrageenan"],"proteins":["chicken","liver"],"tips":["Good source of real meat","Low carb"],"summary":"Decent quality wet food."}\n\nIngredients: ${input}`}]
+      })
+    });
+    const data = await resp.json();
+    showFoodResult(JSON.parse(data.content[0].text.match(/\{[\s\S]*\}/)[0]));
+  } catch(err) { showFoodError(); }
+}
+
+function showFoodLoading(msg) {
+  document.getElementById('food-result').innerHTML = `<div class="card" style="text-align:center;padding:24px;"><div style="font-size:32px;margin-bottom:8px;">🔍</div><div style="font-size:14px;color:var(--text2);">${msg}</div></div>`;
+}
+function showFoodError() {
+  document.getElementById('food-result').innerHTML = `<div class="card" style="text-align:center;padding:20px;"><div style="font-size:14px;color:var(--coral);">Couldn't analyze — check connection and try again.</div></div>`;
+}
+function showFoodResult(r) {
+  const gc={A:'#1D9E75',B:'#5DAA45',C:'#EF9F27',D:'#E8752A',F:'#D85A30'};
+  const gb={A:'#E1F5EE',B:'#EAF3DE',C:'#FAEEDA',D:'#FAECE7',F:'#FAECE7'};
+  const g = r.grade||'C';
+  document.getElementById('food-result').innerHTML = `
+    <div class="card" style="margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+        <div style="width:60px;height:60px;border-radius:50%;background:${gb[g]};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span style="font-size:26px;font-weight:700;color:${gc[g]};">${g}</span>
+        </div>
+        <div><div style="font-size:15px;font-weight:500;">Safety Grade · ${r.score||60}/100</div>
+          <div style="font-size:13px;color:var(--text2);margin-top:2px;">${r.summary||''}</div></div>
+      </div>
+      ${r.harmful&&r.harmful.length?`<div style="background:var(--coral-light);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:700;color:var(--coral);margin-bottom:4px;">⚠️ Concerns</div>
+        <div style="font-size:13px;color:var(--coral);">${r.harmful.join(', ')}</div></div>`
+      :`<div style="background:var(--green-light);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+        <div style="font-size:13px;color:var(--green);font-weight:600;">✅ No harmful ingredients detected</div></div>`}
+      ${r.proteins&&r.proteins.length?`<div style="margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;">PROTEINS</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">${r.proteins.map(p=>`<span style="background:var(--green-light);color:var(--green);font-size:12px;padding:4px 10px;border-radius:20px;font-weight:600;">${p}</span>`).join('')}</div></div>`:''}
+      ${r.tips&&r.tips.length?`<div>${r.tips.map(t=>`<div style="font-size:13px;color:var(--text2);padding:5px 0;border-bottom:1px solid var(--gray2);">• ${t}</div>`).join('')}</div>`:''}
+    </div>`;
+}
+
+// ─── CAT PROFILE CARD ─────────────────────────────────────────────────────
+function renderCatCard() {
+  const cat = getCat();
+  const age = Math.floor((new Date() - new Date(cat.birthday)) / (365.25*24*3600*1000));
+  const lastMood = cat.logs.filter(l=>l.type==='mood').sort((a,b)=>b.ts-a.ts)[0];
+  const mood = lastMood ? lastMood.detail : '😺';
+  const w = cat.weights&&cat.weights.length ? cat.weights[cat.weights.length-1].val+' kg' : '—';
+  document.getElementById('cat-card-preview').innerHTML = `
+    <div id="cat-card-render" style="background:linear-gradient(135deg,#0F6E56 0%,#1D9E75 100%);border-radius:20px;padding:28px 24px;color:#fff;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-20px;right:-20px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,0.08);pointer-events:none;"></div>
+      <div style="position:absolute;bottom:-30px;left:-10px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.05);pointer-events:none;"></div>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;position:relative;">
+        <div style="width:72px;height:72px;border-radius:50%;border:3px solid rgba(255,255,255,0.5);overflow:hidden;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;">
+          ${cat.photo?`<img src="${cat.photo}" style="width:100%;height:100%;object-fit:cover;">`:'🐱'}
+        </div>
+        <div><div style="font-family:'DM Serif Display',serif;font-size:24px;">${cat.name}</div>
+          <div style="font-size:13px;opacity:0.85;margin-top:2px;">${cat.breed||'Mixed'} · ${age} yrs old</div>
+          <div style="font-size:16px;margin-top:2px;">${mood}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;position:relative;">
+        ${[{v:w,l:'Weight'},{v:(cat.streak||0)+'d',l:'Streak'},{v:cat.logs.length,l:'Logs'}].map(s=>`
+          <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:10px;text-align:center;">
+            <div style="font-size:17px;font-weight:600;">${s.v}</div>
+            <div style="font-size:10px;opacity:0.75;margin-top:2px;">${s.l}</div>
+          </div>`).join('')}
+      </div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.2);display:flex;justify-content:space-between;position:relative;">
+        <div style="font-size:11px;opacity:0.65;">PawLog — Cat Care Tracker</div>
+        <div style="font-size:11px;opacity:0.65;">catlance.netlify.app</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;background:var(--gray);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text2);">
+      📸 Screenshot the card above and share on WhatsApp, Instagram, or anywhere!
+    </div>`;
+}
+
+function shareCatCard() {
+  const cat = getCat();
+  if (navigator.share) {
+    navigator.share({title:cat.name+' on PawLog 🐱',text:'Track your cat\'s care with PawLog!',url:'https://catlance.netlify.app'});
+  } else {
+    navigator.clipboard.writeText('https://catlance.netlify.app').then(()=>showToast('Link copied! 📲'));
+  }
+}
+function downloadCatCard() { showToast('Take a screenshot to save 📱'); }
+
+// ─── AI HEALTH TIPS ───────────────────────────────────────────────────────
+async function renderHealthTips() {
+  const cat = getCat();
+  document.getElementById('tips-cat-name').textContent = cat.name + "'s Health Tips";
+  const el = document.getElementById('health-tips-content');
+  el.innerHTML = `<div class="card" style="text-align:center;padding:24px;"><div style="font-size:32px;margin-bottom:8px;">💡</div><div style="font-size:14px;color:var(--text2);">Analysing ${cat.name}'s logs...</div></div>`;
+  const age = Math.floor((new Date()-new Date(cat.birthday))/(365.25*24*3600*1000));
+  const moods = cat.logs.filter(l=>l.type==='mood').slice(-7).map(l=>l.label).join(', ')||'None recorded';
+  const wt = cat.weights&&cat.weights.length>=2?(cat.weights[cat.weights.length-1].val-cat.weights[0].val).toFixed(2)+'kg change':'No data';
+  const prompt = `Cat: ${cat.name}, Breed: ${cat.breed||'Unknown'}, Age: ${age}yrs, Recent moods: ${moods}, Weight trend: ${wt}, Care streak: ${cat.streak||0} days.\n\nGive 4 warm personalised health tips. Respond ONLY with JSON: {"tips":[{"icon":"🏃","title":"Exercise","body":"tip text"},{"icon":"🍽️","title":"Nutrition","body":"tip"},{"icon":"😴","title":"Rest","body":"tip"},{"icon":"❤️","title":"Wellness","body":"tip"}]}`;
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,messages:[{role:'user',content:prompt}]})
+    });
+    const data = await resp.json();
+    const result = JSON.parse(data.content[0].text.match(/\{[\s\S]*\}/)[0]);
+    el.innerHTML = `<div style="background:var(--green-light);border-radius:var(--card-r);padding:12px 14px;font-size:13px;color:var(--green);font-weight:500;margin-bottom:12px;">✨ Personalised tips based on ${cat.name}'s actual care data</div>
+      ${result.tips.map(t=>`<div class="card" style="margin-bottom:10px;display:flex;gap:14px;align-items:flex-start;">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">${t.icon}</div>
+        <div><div style="font-size:15px;font-weight:500;margin-bottom:3px;">${t.title}</div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.6;">${t.body}</div></div>
+      </div>`).join('')}
+      <button onclick="renderHealthTips()" style="width:100%;background:var(--gray);border:1px solid var(--gray2);border-radius:12px;padding:12px;font-size:13px;font-weight:600;font-family:var(--font-body);cursor:pointer;margin-bottom:20px;">🔄 Refresh tips</button>`;
+  } catch(err) {
+    const generic=[{icon:'💧',title:'Fresh water',body:'Change water daily and keep it away from food.'},{icon:'🎮',title:'Daily play',body:'10-15 mins of active play keeps weight healthy and reduces stress.'},{icon:'🦷',title:'Dental health',body:'Offer dental treats weekly. 70% of cats over 3 have gum disease.'},{icon:'🏥',title:'Annual checkup',body:'Even healthy cats need yearly vet visits for early detection.'}];
+    el.innerHTML = `<div class="card" style="text-align:center;padding:20px;margin-bottom:12px;"><div style="font-size:14px;color:var(--text2);">Open on catlance.netlify.app for AI-powered tips</div></div>
+      ${generic.map(t=>`<div class="card" style="margin-bottom:8px;display:flex;gap:12px;"><span style="font-size:20px;">${t.icon}</span><div><div style="font-size:14px;font-weight:500;">${t.title}</div><div style="font-size:13px;color:var(--text2);margin-top:2px;">${t.body}</div></div></div>`).join('')}`;
+  }
+}
+
+// ─── BREED LIKES & LEADERBOARD ────────────────────────────────────────────
+function likeBreed(name, e) {
+  if (e) e.stopPropagation();
+  if (!state.breedLikes) state.breedLikes = {};
+  if (!state.breedLiked) state.breedLiked = {};
+  if (state.breedLiked[name]) {
+    // Unlike
+    state.breedLikes[name] = Math.max(0, (state.breedLikes[name] || 1) - 1);
+    delete state.breedLiked[name];
+  } else {
+    // Like
+    state.breedLikes[name] = (state.breedLikes[name] || 0) + 1;
+    state.breedLiked[name] = true;
+    // Also update custom breed object
+    const cb = (state.customBreeds||[]).find(b => b.name === name);
+    if (cb) cb.likes = state.breedLikes[name];
+    showToast('❤️ Liked ' + name + '!');
+  }
+  save();
+  renderBreedList(document.getElementById('breed-search') ? document.getElementById('breed-search').value.toLowerCase() : '');
+}
+
+function showEncycTab(tab) {
+  document.getElementById('encyc-breeds-tab').style.display = tab === 'breeds' ? 'block' : 'none';
+  document.getElementById('encyc-leaderboard-tab').style.display = tab === 'leaderboard' ? 'block' : 'none';
+  document.getElementById('etab-breeds').classList.toggle('active-stab', tab === 'breeds');
+  document.getElementById('etab-leaderboard').classList.toggle('active-stab', tab === 'leaderboard');
+  if (tab === 'leaderboard') renderLeaderboard();
+}
+
+function renderLeaderboard() {
+  const el = document.getElementById('leaderboard-content');
+  if (!el) return;
+  const allLikes = state.breedLikes || {};
+  const allBreeds = getAllBreeds();
+  // Most liked breeds (top 5)
+  const topBreeds = allBreeds
+    .map(b => ({ name: b.name, likes: allLikes[b.name] || b.likes || 0, isCustom: b.isCustom }))
+    .filter(b => b.likes > 0)
+    .sort((a,b) => b.likes - a.likes)
+    .slice(0, 5);
+  // Top contributors (from customBreeds)
+  const contributors = {};
+  (state.customBreeds||[]).forEach(b => {
+    const c = b.contributor || 'Anonymous';
+    if (!contributors[c]) contributors[c] = { name:c, count:0, breeds:[] };
+    contributors[c].count++;
+    contributors[c].breeds.push(b.name);
+  });
+  const topContribs = Object.values(contributors).sort((a,b) => b.count - a.count).slice(0,5);
+  const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+
+  el.innerHTML = `
+    <!-- Most loved breeds -->
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;">❤️ Most loved breeds</div>
+    ${topBreeds.length === 0 ? `<div class="card" style="text-align:center;padding:20px;color:var(--text2);margin-bottom:16px;">
+      <div style="font-size:28px;margin-bottom:6px;">🤍</div>
+      <div style="font-size:14px;">No likes yet — tap 🤍 on any breed!</div>
+    </div>` : topBreeds.map((b,i) => `
+      <div class="card" style="margin-bottom:8px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:22px;flex-shrink:0;">${medals[i]}</span>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:500;">${b.name}</div>
+          ${b.isCustom ? '<div style="font-size:11px;color:var(--amber);margin-top:1px;">Community added</div>' : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;color:var(--coral);font-weight:700;font-size:14px;">❤️ ${b.likes}</div>
+      </div>`).join('')}
+
+    <!-- Top contributors -->
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-top:20px;margin-bottom:10px;">🌟 Top contributors</div>
+    ${topContribs.length === 0 ? `<div class="card" style="text-align:center;padding:20px;color:var(--text2);margin-bottom:16px;">
+      <div style="font-size:28px;margin-bottom:6px;">🌟</div>
+      <div style="font-size:14px;">No contributors yet — add a breed and put your name on the map!</div>
+    </div>` : topContribs.map((c,i) => `
+      <div class="card" style="margin-bottom:8px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:22px;flex-shrink:0;">${medals[i]}</span>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:500;">${c.name}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px;">${c.breeds.slice(0,3).join(', ')}${c.breeds.length > 3 ? ' +' + (c.breeds.length-3) + ' more' : ''}</div>
+        </div>
+        <div style="background:var(--green-light);color:var(--green);font-weight:700;font-size:14px;padding:4px 12px;border-radius:20px;">${c.count} breed${c.count>1?'s':''}</div>
+      </div>`).join('')}
+    <div style="height:80px;"></div>`;
+}
+function catToHumanAge(catYears) {
+  if (catYears < 1) return Math.round(catYears * 15);
+  if (catYears < 2) return Math.round(15 + (catYears - 1) * 9);
+  return Math.round(24 + (catYears - 2) * 4);
+}
+
+function renderWeeklyReport() {
+  const cat = getCat();
+  if (!cat) return;
+  document.getElementById('weekly-title').textContent = cat.name + "'s Week";
+  const el = document.getElementById('weekly-report-content');
+  const now = Date.now();
+  const weekStart = now - 7*24*3600*1000;
+  const weekLogs = (cat.logs||[]).filter(l => l.ts > weekStart);
+  const moodLogs = weekLogs.filter(l => l.type === 'feed');
+  const feedLogs = weekLogs.filter(l => l.type === 'feed');
+  const allMoods = weekLogs.filter(l => l.type === 'mood');
+  const catYears = (now - new Date(cat.birthday)) / (365.25*24*3600*1000);
+  const humanAge = catToHumanAge(catYears);
+  const score = Math.min(100, Math.round((weekLogs.length / 14) * 100));
+  const grade = score >= 85 ? 'A' : score >= 70 ? 'B' : score >= 50 ? 'C' : 'D';
+  const gradeColor = {A:'#1D9E75',B:'#5DAA45',C:'#EF9F27',D:'#D85A30'}[grade];
+  const gradeBg = {A:'#E1F5EE',B:'#EAF3DE',C:'#FAEEDA',D:'#FAECE7'}[grade];
+  const moodCounts = {};
+  allMoods.forEach(m => { moodCounts[m.detail] = (moodCounts[m.detail]||0)+1; });
+  const topMood = Object.entries(moodCounts).sort((a,b)=>b[1]-a[1])[0];
+  const feedCount = weekLogs.filter(l=>l.type==='feed').length;
+  const moodCount = allMoods.length;
+  const weightCount = weekLogs.filter(l=>l.type==='weight').length;
+
+  el.innerHTML = `
+    <!-- Professional Scorecard -->
+    <div style="background:linear-gradient(145deg,#0a5c47,#1D9E75);border-radius:22px;padding:24px;color:#fff;margin-bottom:14px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-30px;right:-30px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,0.06);pointer-events:none;"></div>
+      <div style="position:absolute;bottom:-40px;left:-20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.04);pointer-events:none;"></div>
+
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;position:relative;">
+        <div>
+          <div style="font-size:11px;font-weight:700;opacity:0.6;letter-spacing:.1em;text-transform:uppercase;">Weekly Report</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;margin-top:4px;">${cat.name}'s Care Report</div>
+          <div style="font-size:12px;opacity:0.65;margin-top:2px;">${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div>
+        </div>
+        <div style="background:${gradeBg};border-radius:50%;width:58px;height:58px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span style="font-size:28px;font-weight:800;color:${gradeColor};">${grade}</span>
+        </div>
+      </div>
+
+      <!-- Score bar -->
+      <div style="margin-bottom:18px;position:relative;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;opacity:0.7;margin-bottom:6px;">
+          <span>Care score</span><span>${score}/100</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.15);border-radius:20px;height:8px;">
+          <div style="background:#fff;border-radius:20px;height:8px;width:${score}%;transition:width 0.6s ease;"></div>
+        </div>
+      </div>
+
+      <!-- 4 stats -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;position:relative;">
+        ${[
+          {v:feedCount,l:'Meals',i:'🍽️'},
+          {v:moodCount,l:'Moods',i:'😺'},
+          {v:weightCount,l:'Weights',i:'⚖️'},
+          {v:cat.streak||0,l:'Streak',i:'🔥'},
+        ].map(s=>`<div style="background:rgba(255,255,255,0.12);border-radius:12px;padding:10px 6px;text-align:center;">
+          <div style="font-size:14px;margin-bottom:2px;">${s.i}</div>
+          <div style="font-size:18px;font-weight:700;">${s.v}</div>
+          <div style="font-size:9px;opacity:0.65;margin-top:1px;">${s.l}</div>
+        </div>`).join('')}
+      </div>
+
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.15);display:flex;justify-content:space-between;align-items:center;position:relative;">
+        <div style="font-size:11px;opacity:0.6;">${topMood ? 'Mostly '+topMood[0]+' this week' : 'Track moods for insights!'} · ${humanAge} human yrs</div>
+        <div style="font-size:10px;opacity:0.5;">catlance.netlify.app</div>
+      </div>
+    </div>
+
+    <!-- Share buttons -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button onclick="shareWeeklyReport()" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:600;font-family:var(--font-body);cursor:pointer;">📤 Share report</button>
+      <button onclick="showToast('Screenshot the card above! 📱')" style="flex:1;background:var(--gray);border:1px solid var(--gray2);border-radius:12px;padding:12px;font-size:13px;font-weight:600;font-family:var(--font-body);cursor:pointer;">📸 Save image</button>
+    </div>
+
+    <!-- Cat age card -->
+    <div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:14px;">
+      <div style="width:44px;height:44px;background:var(--green-light);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;">🧑</div>
+      <div>
+        <div style="font-size:15px;font-weight:500;">${cat.name} is ${humanAge} in human years</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:2px;">${catYears < 2 ? 'Still a kitten at heart!' : catYears < 7 ? 'In their prime!' : catYears < 12 ? 'Wise and settled.' : 'A distinguished senior! 👑'} (${catYears.toFixed(1)} cat years)</div>
+      </div>
+    </div>
+
+    <!-- Week breakdown -->
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 8px;">Breakdown</div>
+    ${weekLogs.length === 0 ? `<div class="card" style="text-align:center;padding:20px;color:var(--text2);font-size:14px;">No logs this week — start tracking daily!</div>` : [
+      feedCount > 0 ? `<div class="card" style="margin-bottom:8px;display:flex;gap:12px;align-items:center;"><span style="font-size:22px;">🍽️</span><div><div style="font-weight:500;">${feedCount} meals logged</div><div style="font-size:12px;color:var(--text2);">Feeding tracked ${feedCount} time${feedCount>1?'s':''} this week</div></div></div>` : '',
+      moodCount > 0 ? `<div class="card" style="margin-bottom:8px;display:flex;gap:12px;align-items:center;"><span style="font-size:22px;">${topMood?.[0]||'😺'}</span><div><div style="font-weight:500;">Mood checked ${moodCount}x</div><div style="font-size:12px;color:var(--text2);">Most common: ${topMood?.[0]||'Mixed'}</div></div></div>` : '',
+      `<div class="card" style="margin-bottom:20px;display:flex;gap:12px;align-items:center;"><span style="font-size:22px;">📊</span><div><div style="font-weight:500;">Overall: Grade ${grade} · ${score}/100</div><div style="font-size:12px;color:var(--text2);">${score >= 85 ? 'Outstanding week! Keep it up 🌟' : score >= 70 ? 'Great job this week!' : score >= 50 ? 'Getting there — log daily for A grade' : 'Log meals and moods daily'}</div></div></div>`
+    ].filter(Boolean).join('')}`;
+
+  el.innerHTML = `
+    <!-- Shareable card -->
+    <div style="background:linear-gradient(135deg,#0F6E56,#1D9E75);border-radius:20px;padding:24px;color:#fff;margin-bottom:14px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.08);"></div>
+      <div style="font-size:12px;opacity:0.75;margin-bottom:4px;">WEEKLY REPORT · ${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+      <div style="font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:16px;">${cat.name}'s Week in Review</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:10px;text-align:center;">
+          <div style="font-size:24px;font-weight:700;">${grade}</div>
+          <div style="font-size:10px;opacity:0.75;margin-top:2px;">Care grade</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:10px;text-align:center;">
+          <div style="font-size:24px;font-weight:700;">${feedLogs.length}</div>
+          <div style="font-size:10px;opacity:0.75;margin-top:2px;">Meals logged</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:10px;text-align:center;">
+          <div style="font-size:24px;font-weight:700;">${cat.streak||0}</div>
+          <div style="font-size:10px;opacity:0.75;margin-top:2px;">Day streak</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:12px;opacity:0.7;">${topMood ? 'Mostly ' + topMood[0] : 'Track moods daily!'} · ${humanAge} human years old</div>
+        <div style="font-size:11px;opacity:0.6;">catlance.netlify.app</div>
+      </div>
+    </div>
+
+    <!-- Share buttons -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button onclick="shareWeeklyReport()" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:600;font-family:var(--font-body);cursor:pointer;">📤 Share</button>
+      <button onclick="showToast('Screenshot the card above 📱')" style="flex:1;background:var(--gray);border:1px solid var(--gray2);border-radius:12px;padding:12px;font-size:13px;font-weight:600;font-family:var(--font-body);cursor:pointer;">📸 Screenshot</button>
+    </div>
+
+    <!-- Cat age -->
+    <div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:14px;">
+      <div style="width:44px;height:44px;background:var(--green-light);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;">🧑</div>
+      <div>
+        <div style="font-size:15px;font-weight:500;">${cat.name} is ${humanAge} in human years</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:2px;">${catYears < 2 ? 'Still a kitten at heart!' : catYears < 7 ? 'In their prime!' : catYears < 12 ? 'Wise and settled.' : 'A distinguished senior! 👑'}</div>
+      </div>
+    </div>
+
+    <!-- This week breakdown -->
+    <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 8px;">This week</div>
+    ${weekLogs.length === 0 ? `<div class="card" style="text-align:center;padding:20px;color:var(--text2);font-size:14px;">No logs this week yet — start tracking!</div>` : ''}
+    ${feedLogs.length > 0 ? `<div class="card" style="margin-bottom:8px;display:flex;gap:12px;align-items:center;"><span style="font-size:24px;">🍽️</span><div><div style="font-weight:500;">${feedLogs.length} meals logged</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">Good job keeping up with feeding!</div></div></div>` : ''}
+    ${allMoods.length > 0 ? `<div class="card" style="margin-bottom:8px;display:flex;gap:12px;align-items:center;"><span style="font-size:24px;">${topMood?.[0]||'😺'}</span><div><div style="font-weight:500;">Mood: mostly ${topMood?.[0]||'not tracked'}</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">${allMoods.length} mood check-ins this week</div></div></div>` : ''}
+    <div class="card" style="margin-bottom:20px;display:flex;gap:12px;align-items:center;">
+      <span style="font-size:24px;">📊</span>
+      <div>
+        <div style="font-weight:500;">Care score: ${grade} (${score}/100)</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px;">${score >= 85 ? 'Amazing week! ' + cat.name + ' is thriving 🌟' : score >= 70 ? 'Great job this week!' : score >= 50 ? 'Getting there — keep logging!' : 'Log meals and moods daily for a better score'}</div>
+      </div>
+    </div>`;
+}
+
+function shareWeeklyReport() {
+  const cat = getCat();
+  if (navigator.share) {
+    navigator.share({ title: cat.name + "'s Weekly Report 🐱", text: 'Check out ' + cat.name + "'s weekly care report on PawLog!", url: 'https://catlance.netlify.app' });
+  } else {
+    navigator.clipboard.writeText('https://catlance.netlify.app').then(() => showToast('Link copied! 📲'));
+  }
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ─── GALLERY ──────────────────────────────────────────────────────────────
+function renderGallery() {
+  const cat = getCat();
+  document.getElementById('gallery-title').textContent = cat.name + "'s Gallery";
+  const photos = cat.gallery || [];
+  document.getElementById('gallery-count').textContent = photos.length + ' photo' + (photos.length !== 1 ? 's' : '');
+  const grid = document.getElementById('gallery-grid');
+  if (!photos.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:50px 20px;color:var(--text3);">
+      <div style="font-size:48px;margin-bottom:12px;">📷</div>
+      <div style="font-size:14px;">No photos yet</div>
+      <div style="font-size:12px;margin-top:4px;">Tap + Add photo to start</div>
+    </div>`;
+    return;
+  }
+  grid.innerHTML = photos.map((p, i) =>
+    `<img class="gallery-thumb" src="${p.src}" alt="photo ${i+1}" onclick="openLightbox(${i})">`
+  ).join('');
+}
+
+function triggerGalleryUpload() {
+  document.getElementById('gallery-input').click();
+}
+
+function handleGalleryUpload(e) {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  const cat = getCat();
+  if (!cat.gallery) cat.gallery = [];
+  let loaded = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      cat.gallery.push({ src: ev.target.result, ts: Date.now() });
+      loaded++;
+      if (loaded === files.length) {
+        save();
+        renderGallery();
+        showToast(loaded + ' photo' + (loaded > 1 ? 's' : '') + ' added!');
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
+
+let lightboxIndex = -1;
+function openLightbox(i) {
+  lightboxIndex = i;
+  const cat = getCat();
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightbox-img').src = cat.gallery[i].src;
+  lb.style.display = 'flex';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+  lightboxIndex = -1;
+}
+function deleteGalleryPhoto(e) {
+  e.stopPropagation();
+  const cat = getCat();
+  if (lightboxIndex < 0) return;
+  cat.gallery.splice(lightboxIndex, 1);
+  save();
+  closeLightbox();
+  renderGallery();
+  showToast('Photo deleted');
+}
+
+// ─── ENCYCLOPEDIA ─────────────────────────────────────────────────────────
+const BREEDS = [
+  { name:'Abyssinian', origin:'Ethiopia', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Gustav_chocolate.jpg/320px-Gustav_chocolate.jpg', life:'12–15 yrs', weight:'2.7–4.9 kg', size:'Small-Medium', coat:'Short', color:'Ticked ruddy, blue, fawn, red', desc:'One of the oldest and most athletic breeds. Constantly in motion, endlessly curious, always exploring every corner of the home.', traits:{affection:3,playfulness:5,grooming:1,social:4,vocal:2}, tags:['Athletic','Curious','Ancient'] },
+  { name:'American Bobtail', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/American_Bobtail.jpg/320px-American_Bobtail.jpg', life:'13–15 yrs', weight:'3–7 kg', size:'Medium-Large', coat:'Short/Long', color:'Various', desc:'Recognisable by its naturally stubby tail. Intelligent, adaptable, and bonds closely with its family like a faithful dog.', traits:{affection:4,playfulness:4,grooming:2,social:4,vocal:2}, tags:['Adaptable','Dog-like','Rare'] },
+  { name:'American Curl', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/CurlCat.jpg/320px-CurlCat.jpg', life:'12–16 yrs', weight:'2.3–4.5 kg', size:'Medium', coat:'Short/Long', color:'Various', desc:'Born with straight ears that curl backward within days of birth. Curious, playful, and affectionate well into old age.', traits:{affection:4,playfulness:4,grooming:2,social:4,vocal:2}, tags:['Unique ears','Playful','Gentle'] },
+  { name:'American Shorthair', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Shorthair-profile.jpg/320px-Shorthair-profile.jpg', life:'15–20 yrs', weight:'3.6–6.8 kg', size:'Medium-Large', coat:'Short', color:'Various', desc:'The classic all-American cat. Sturdy, easy-going, and gets along with children, dogs, and everyone in between.', traits:{affection:3,playfulness:3,grooming:1,social:3,vocal:2}, tags:['Hardy','Family-friendly','Long-lived'] },
+  { name:'Balinese', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Balinese_cat.jpg/320px-Balinese_cat.jpg', life:'12–20 yrs', weight:'2.3–5 kg', size:'Medium', coat:'Long', color:'Pointed', desc:'A longhaired Siamese with the same talkative personality but a silkier, flowing coat that surprisingly sheds less.', traits:{affection:5,playfulness:4,grooming:2,social:5,vocal:5}, tags:['Vocal','Silky','Intelligent'] },
+  { name:'Bengal', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Paintedcats_Red_Star_standing.jpg/320px-Paintedcats_Red_Star_standing.jpg', life:'12–16 yrs', weight:'3.5–7 kg', size:'Medium-Large', coat:'Short', color:'Spotted/Marbled', desc:'Wild-looking with leopard spots inherited from Asian leopard cats. Athletic, energetic, loves water, and highly intelligent.', traits:{affection:3,playfulness:5,grooming:1,social:3,vocal:3}, tags:['Wild look','Active','Smart'] },
+  { name:'Birman', origin:'Myanmar', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Birman_cat.jpg/320px-Birman_cat.jpg', life:'12–16 yrs', weight:'3.6–7 kg', size:'Medium-Large', coat:'Long', color:'Pointed with white gloves', desc:'Sacred temple cat of Burma. Silky colourpointed coat with distinctive white paw gloves. Gentle and devoted.', traits:{affection:5,playfulness:3,grooming:3,social:4,vocal:2}, tags:['Sacred','Gentle','Gloved paws'] },
+  { name:'Bombay', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Bombay_cat_001.jpg/320px-Bombay_cat_001.jpg', life:'12–16 yrs', weight:'2.7–5 kg', size:'Medium', coat:'Short', color:'Black', desc:'Bred to look like a miniature black panther. Craves human attention, loves warmth, and follows you everywhere.', traits:{affection:5,playfulness:4,grooming:1,social:5,vocal:3}, tags:['Black panther','Clingy','Sleek'] },
+  { name:'British Longhair', origin:'UK', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/British_Longhair_2.jpg/320px-British_Longhair_2.jpg', life:'12–15 yrs', weight:'4–8 kg', size:'Large', coat:'Long', color:'Various', desc:'The longhaired cousin of the British Shorthair. Same round teddy-bear face, same calm temperament — just fluffier.', traits:{affection:3,playfulness:3,grooming:3,social:3,vocal:2}, tags:['Fluffy','Calm','Teddy bear'] },
+  { name:'British Shorthair', origin:'UK', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Britishcat.jpg/320px-Britishcat.jpg', life:'12–20 yrs', weight:'4–8 kg', size:'Large', coat:'Short', color:'Various', desc:'Stocky, dignified, and famously calm. The original teddy bear cat with a plush dense coat and round copper eyes.', traits:{affection:3,playfulness:3,grooming:2,social:3,vocal:2}, tags:['Calm','Independent','Long-lived'] },
+  { name:'Burmese', origin:'Myanmar', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Sable_burmese_cat_from_commons.jpg/320px-Sable_burmese_cat_from_commons.jpg', life:'16–18 yrs', weight:'3.5–6.5 kg', size:'Medium', coat:'Short', color:'Sable, champagne, blue, platinum', desc:'Velvet-soft coat and brick-like density. Extroverted social butterflies that hate being alone.', traits:{affection:5,playfulness:4,grooming:1,social:5,vocal:4}, tags:['Velvety','Social','Heavy'] },
+  { name:'Chartreux', origin:'France', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Pol_chartreux.jpg/320px-Pol_chartreux.jpg', life:'11–15 yrs', weight:'3.5–7.5 kg', size:'Medium-Large', coat:'Short', color:'Blue-grey', desc:'Ancient French breed with a smile-like muzzle. Quietly observant, deeply loyal, never demanding.', traits:{affection:4,playfulness:3,grooming:2,social:3,vocal:1}, tags:['French','Quiet','Loyal'] },
+  { name:'Cornish Rex', origin:'UK', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Cornish_Rex.jpg/320px-Cornish_Rex.jpg', life:'11–15 yrs', weight:'2.3–4.5 kg', size:'Small-Medium', coat:'Curly', color:'Various', desc:'Only has a down undercoat — no guard hairs. Feels like crushed velvet. Acts like a kitten forever.', traits:{affection:5,playfulness:5,grooming:1,social:5,vocal:3}, tags:['Curly coat','Kitten forever','Warm'] },
+  { name:'Devon Rex', origin:'UK', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Devon_Rex_from_commons.jpg/320px-Devon_Rex_from_commons.jpg', life:'9–15 yrs', weight:'2.3–4.5 kg', size:'Small-Medium', coat:'Curly', color:'Various', desc:'Huge ears, impish face, wavy coat. Called the "pixie cat" — mischievous, acrobatic, and obsessed with people.', traits:{affection:5,playfulness:5,grooming:1,social:5,vocal:3}, tags:['Pixie','Mischievous','Curly'] },
+  { name:'Egyptian Mau', origin:'Egypt', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/EgyptianMau.jpg/320px-EgyptianMau.jpg', life:'12–15 yrs', weight:'2.7–5 kg', size:'Medium', coat:'Short', color:'Spotted silver, bronze, smoke', desc:'The only naturally spotted domestic cat. Ancient lineage depicted in Egyptian art. Fastest domestic cat.', traits:{affection:4,playfulness:5,grooming:1,social:3,vocal:3}, tags:['Fastest','Spotted','Ancient'] },
+  { name:'Exotic Shorthair', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Exotic_Shorthair_-_Catmax.jpg/320px-Exotic_Shorthair_-_Catmax.jpg', life:'12–15 yrs', weight:'3–6 kg', size:'Medium-Large', coat:'Short', color:'Various', desc:'The lazy man\'s Persian — same flat face and sweet temperament, but with a short easy-care plush coat.', traits:{affection:5,playfulness:3,grooming:2,social:4,vocal:2}, tags:['Persian face','Easy care','Quiet'] },
+  { name:'Himalayan', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Himalayan.jpg/320px-Himalayan.jpg', life:'9–15 yrs', weight:'3–5.5 kg', size:'Medium-Large', coat:'Long', color:'Colourpointed', desc:'Persian body and coat with Siamese colouring. Gentle and sweet, prefers quiet calm homes.', traits:{affection:5,playfulness:2,grooming:5,social:3,vocal:3}, tags:['Persian+Siamese','Fluffy','Calm'] },
+  { name:'Japanese Bobtail', origin:'Japan', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Japanese_Bobtail_cat_-_Flickr_-_GregTheBusker_%281%29.jpg/320px-Japanese_Bobtail_cat_-_Flickr_-_GregTheBusker_%281%29.jpg', life:'15–18 yrs', weight:'2.3–4 kg', size:'Medium', coat:'Short/Long', color:'Various', desc:'Ancient Japanese breed, model for the beckoning cat Maneki-neko. Considered a symbol of good luck.', traits:{affection:4,playfulness:5,grooming:2,social:5,vocal:4}, tags:['Lucky cat','Active','Tri-colour'] },
+  { name:'Korat', origin:'Thailand', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/KoratCat.jpg/320px-KoratCat.jpg', life:'15–20 yrs', weight:'2.7–4.5 kg', size:'Medium', coat:'Short', color:'Silver-blue', desc:'One of the oldest stable breeds. Considered a living good luck charm in Thailand. Silver-blue coat shimmers.', traits:{affection:4,playfulness:3,grooming:1,social:4,vocal:2}, tags:['Ancient','Lucky','Silver'] },
+  { name:'LaPerm', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/LaPerm_Cat.jpg/320px-LaPerm_Cat.jpg', life:'10–15 yrs', weight:'2.3–4.5 kg', size:'Medium', coat:'Curly', color:'Various', desc:'Curly coat that feels like a lamb. Born bald, then curls appear. Affectionate and loves sitting on shoulders.', traits:{affection:5,playfulness:4,grooming:2,social:5,vocal:2}, tags:['Curly','Shoulder cat','Soft'] },
+  { name:'Lykoi', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Lykoi_Cat.jpg/320px-Lykoi_Cat.jpg', life:'12–15 yrs', weight:'2.7–4.5 kg', size:'Medium', coat:'Partial hairless', color:'Black roan', desc:'The "werewolf cat" — patchy coat gives a wolf-like appearance. Loyal, surprisingly gentle, loves to hunt toys.', traits:{affection:4,playfulness:5,grooming:2,social:4,vocal:2}, tags:['Werewolf','Unique','Loyal'] },
+  { name:'Maine Coon', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Maine_Coon_cat_by_Tomitheos.JPG/320px-Maine_Coon_cat_by_Tomitheos.JPG', life:'12–15 yrs', weight:'4–9 kg', size:'Large', coat:'Long', color:'Various', desc:'One of the largest domestic breeds. Dog-like loyalty, loves water, fetches toys, and trills instead of meowing.', traits:{affection:4,playfulness:5,grooming:4,social:5,vocal:3}, tags:['Giant','Playful','Loyal'] },
+  { name:'Manx', origin:'Isle of Man', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Manxcat.jpg/320px-Manxcat.jpg', life:'14–16 yrs', weight:'3.5–5.5 kg', size:'Medium', coat:'Short/Long', color:'Various', desc:'Tailless cat from the Isle of Man. Hind legs longer than forelegs giving a rabbit-like hop. Smart and loyal.', traits:{affection:4,playfulness:4,grooming:2,social:4,vocal:2}, tags:['Tailless','Dog-like','Island'] },
+  { name:'Munchkin', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Saucer2.jpg/320px-Saucer2.jpg', life:'12–14 yrs', weight:'2–4 kg', size:'Small', coat:'Short/Long', color:'Various', desc:'Short legs from a spontaneous genetic mutation. Despite the legs, can run fast and corners like a sports car.', traits:{affection:4,playfulness:5,grooming:2,social:4,vocal:3}, tags:['Short legs','Playful','Cute'] },
+  { name:'Nebelung', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Nebelung.jpg/320px-Nebelung.jpg', life:'11–16 yrs', weight:'2.7–6.5 kg', size:'Medium', coat:'Long', color:'Blue-grey', desc:'Long-coated Russian Blue relative. Quiet, shy with strangers, but devoted and silky-soft to those it trusts.', traits:{affection:4,playfulness:3,grooming:3,social:3,vocal:2}, tags:['Misty blue','Shy','Loyal'] },
+  { name:'Norwegian Forest Cat', origin:'Norway', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Norwegian_Forest_Cat_Giving_Autograph.jpg/320px-Norwegian_Forest_Cat_Giving_Autograph.jpg', life:'14–16 yrs', weight:'3.5–9 kg', size:'Large', coat:'Long', color:'Various', desc:'Built for Scandinavian winters — waterproof double coat, tufted paws, agility in trees. Gentle giant.', traits:{affection:3,playfulness:4,grooming:4,social:3,vocal:2}, tags:['Nordic','Waterproof coat','Climber'] },
+  { name:'Ocicat', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Chocolate_ocicat_featherfall_ptolemy.jpg/320px-Chocolate_ocicat_featherfall_ptolemy.jpg', life:'12–18 yrs', weight:'2.7–6.8 kg', size:'Medium-Large', coat:'Short', color:'Spotted', desc:'Looks like a wild ocelot but is entirely domestic. Confident, trainable, can learn to play fetch.', traits:{affection:4,playfulness:5,grooming:1,social:5,vocal:3}, tags:['Wild spots','Trainable','Confident'] },
+  { name:'Oriental Shorthair', origin:'UK', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/OrientalBicolourCat.jpg/320px-OrientalBicolourCat.jpg', life:'12–15 yrs', weight:'2.3–5 kg', size:'Medium', coat:'Short', color:'300+ colours', desc:'Essentially a Siamese in every colour imaginable. Same angular body, same loud opinion about everything.', traits:{affection:5,playfulness:5,grooming:1,social:5,vocal:5}, tags:['Vocal','300 colours','Angular'] },
+  { name:'Persian', origin:'Iran', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/White_Persian_Cat.jpg/320px-White_Persian_Cat.jpg', life:'12–17 yrs', weight:'3–6 kg', size:'Medium-Large', coat:'Long', color:'Various', desc:'Luxuriously fluffy with a sweet, serene temperament. Prefers quiet homes, hates disruption, and loves being brushed.', traits:{affection:5,playfulness:2,grooming:5,social:3,vocal:2}, tags:['Fluffy','Gentle','Indoor'] },
+  { name:'Peterbald', origin:'Russia', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bc/PeterBald.jpg/320px-PeterBald.jpg', life:'12–15 yrs', weight:'3–5 kg', size:'Medium', coat:'Hairless/Brush', color:'Various', desc:'Russian Sphynx relative — elegant, slender, and extremely affectionate. Coat ranges from bald to velvety flock.', traits:{affection:5,playfulness:4,grooming:3,social:5,vocal:4}, tags:['Russian','Elegant','Hairless'] },
+  { name:'Ragamuffin', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Ragamuffin_cat.jpg/320px-Ragamuffin_cat.jpg', life:'12–16 yrs', weight:'4.5–9 kg', size:'Large', coat:'Long', color:'Various', desc:'Close relative of the Ragdoll — even more laid-back. Puppy-like devotion, goes limp when cuddled.', traits:{affection:5,playfulness:3,grooming:3,social:5,vocal:2}, tags:['Floppy','Giant','Devoted'] },
+  { name:'Ragdoll', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Ragdoll_from_Gatil_Ragequeen.jpg/320px-Ragdoll_from_Gatil_Ragequeen.jpg', life:'12–17 yrs', weight:'4.5–9 kg', size:'Large', coat:'Long', color:'Colourpointed', desc:'Goes completely limp when picked up. Extremely gentle, follows you room to room like a dog.', traits:{affection:5,playfulness:3,grooming:3,social:5,vocal:2}, tags:['Floppy','Kid-friendly','Giant'] },
+  { name:'Russian Blue', origin:'Russia', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Russian_blue_cat.JPG/320px-Russian_blue_cat.JPG', life:'15–20 yrs', weight:'3.5–7 kg', size:'Medium', coat:'Short', color:'Blue-grey', desc:'Striking silver-blue double coat and vivid green eyes. Reserved with strangers but deeply loyal to family.', traits:{affection:4,playfulness:3,grooming:2,social:3,vocal:2}, tags:['Quiet','Long-lived','Elegant'] },
+  { name:'Savannah', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Savannah_cat_-_F1_Son_of_Trouble.jpg/320px-Savannah_cat_-_F1_Son_of_Trouble.jpg', life:'12–20 yrs', weight:'3.5–11 kg', size:'Large', coat:'Short', color:'Spotted', desc:'Serval hybrid — tallest domestic cat breed. Incredibly athletic, leaps to extreme heights, needs huge enrichment.', traits:{affection:3,playfulness:5,grooming:1,social:3,vocal:3}, tags:['Tallest','Serval hybrid','Athletic'] },
+  { name:'Scottish Fold', origin:'Scotland', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Adult_Scottish_Fold.jpg/320px-Adult_Scottish_Fold.jpg', life:'11–14 yrs', weight:'2.7–6 kg', size:'Medium', coat:'Short/Long', color:'Various', desc:'Famous for folded ears and round owl-like eyes. Born with straight ears that fold within 21 days. Gentle and devoted.', traits:{affection:5,playfulness:3,grooming:2,social:4,vocal:2}, tags:['Folded ears','Calm','Rare'] },
+  { name:'Selkirk Rex', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Selkirk_Rex_cat.jpg/320px-Selkirk_Rex_cat.jpg', life:'14–15 yrs', weight:'3–7 kg', size:'Medium-Large', coat:'Curly', color:'Various', desc:'The "cat in sheep\'s clothing" — thick curly coat. Patient, tolerant, and happily lives with anyone.', traits:{affection:4,playfulness:3,grooming:3,social:4,vocal:2}, tags:['Curly','Fluffy','Patient'] },
+  { name:'Siamese', origin:'Thailand', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Siam_lilacpoint.jpg/320px-Siam_lilacpoint.jpg', life:'11–15 yrs', weight:'2.5–5 kg', size:'Medium', coat:'Short', color:'Seal, blue, chocolate, lilac points', desc:'One of the oldest recognised breeds. Highly vocal and opinionated — will tell you exactly how it feels, loudly.', traits:{affection:5,playfulness:4,grooming:1,social:5,vocal:5}, tags:['Vocal','Affectionate','Ancient'] },
+  { name:'Siberian', origin:'Russia', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Siberian_cat_from_Yaroslavl.jpg/320px-Siberian_cat_from_Yaroslavl.jpg', life:'11–15 yrs', weight:'3.5–8 kg', size:'Large', coat:'Long', color:'Various', desc:'Russia\'s national cat. Triple-layered waterproof coat built for harsh winters. Surprisingly low-allergen.', traits:{affection:4,playfulness:4,grooming:3,social:4,vocal:3}, tags:['Hypoallergenic','Triple coat','Jumper'] },
+  { name:'Singapura', origin:'Singapore', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Singapura_cat_2.jpg/320px-Singapura_cat_2.jpg', life:'11–15 yrs', weight:'1.8–3.5 kg', size:'Small', coat:'Short', color:'Sepia agouti', desc:'World\'s smallest cat breed. Large eyes and ears make it look permanently curious. Energetic and surprisingly loud.', traits:{affection:4,playfulness:5,grooming:1,social:5,vocal:3}, tags:['Smallest','Big eyes','Energetic'] },
+  { name:'Snowshoe', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Snowshoe_cat%2C_blue_point.jpg/320px-Snowshoe_cat%2C_blue_point.jpg', life:'14–19 yrs', weight:'2.5–5.5 kg', size:'Medium', coat:'Short', color:'Pointed with white paws', desc:'Siamese-derived breed with distinctive white paw markings. Social and gentle.', traits:{affection:4,playfulness:3,grooming:1,social:5,vocal:3}, tags:['White paws','Social','Gentle'] },
+  { name:'Somali', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Somali_kitten.jpg/320px-Somali_kitten.jpg', life:'12–14 yrs', weight:'3–5.5 kg', size:'Medium', coat:'Long', color:'Ruddy, blue, fawn, red', desc:'The longhaired Abyssinian — fluffy fox-like tail. Same wild energy as the Abyssinian but fluffier.', traits:{affection:3,playfulness:5,grooming:3,social:4,vocal:2}, tags:['Fox tail','Active','Fluffy'] },
+  { name:'Sphynx', origin:'Canada', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Sphinx2_July_2006.jpg/320px-Sphinx2_July_2006.jpg', life:'12–15 yrs', weight:'3–5 kg', size:'Medium', coat:'Hairless', color:'Skin tones', desc:'Hairless but radiates warmth like a living hot water bottle. Extroverted people-lover that hates being alone.', traits:{affection:5,playfulness:4,grooming:3,social:5,vocal:3}, tags:['Hairless','Warm','Unique'] },
+  { name:'Tonkinese', origin:'Canada', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Tonkinese_cat.jpg/320px-Tonkinese_cat.jpg', life:'14–16 yrs', weight:'2.7–5.5 kg', size:'Medium', coat:'Short', color:'Mink patterns', desc:'Burmese × Siamese cross — inherits the best of both. Playful, curious, and endlessly entertaining.', traits:{affection:5,playfulness:5,grooming:1,social:5,vocal:4}, tags:['Burmese+Siamese','Playful','Mink coat'] },
+  { name:'Toyger', origin:'USA', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Toyger_ap.jpg/320px-Toyger_ap.jpg', life:'12–15 yrs', weight:'2.7–6.8 kg', size:'Medium-Large', coat:'Short', color:'Mackerel tabby — tiger striped', desc:'Bred to look like a tiny tiger. Bold mackerel stripes on a muscular body. Friendly and easy to leash train.', traits:{affection:4,playfulness:4,grooming:1,social:4,vocal:3}, tags:['Tiger look','Trainable','Bold'] },
+  { name:'Turkish Angora', origin:'Turkey', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Angora_Portrait.jpg/320px-Angora_Portrait.jpg', life:'12–18 yrs', weight:'2.3–5 kg', size:'Medium', coat:'Long', color:'White preferred + various', desc:'One of the oldest long-haired breeds. Silky single coat that doesn\'t mat. Mischievous, athletic, loves swimming.', traits:{affection:4,playfulness:5,grooming:2,social:4,vocal:3}, tags:['Ancient','Loves water','Silky'] },
+  { name:'Turkish Van', origin:'Turkey', photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Turkish_Van_Cat.jpg/320px-Turkish_Van_Cat.jpg', life:'12–17 yrs', weight:'3–8 kg', size:'Large', coat:'Long', color:'White + coloured head and tail', desc:'The "swimming cat" — loves water obsessively. Powerful, energetic, and very independent.', traits:{affection:3,playfulness:5,grooming:3,social:3,vocal:3}, tags:['Loves swimming','Powerful','Rare pattern'] },
+];
+
+const TRAIT_LABELS = { affection:'Affection', playfulness:'Playfulness', grooming:'Grooming needs', social:'Sociability', vocal:'Vocal level' };
+let currentBreedName = '';
+let newBreedPhotoData = null;
+
+function filterBreeds() {
+  const q = document.getElementById('breed-search').value.toLowerCase();
+  renderBreedList(q);
+}
+
+function renderEncyclopedia() {
+  renderBreedList('');
+}
+
+function getAllBreeds() {
+  const custom = (state.customBreeds || []).map(b => ({ ...b, isCustom:true }));
+  return [...BREEDS, ...custom];
+}
+
+function renderBreedList(q) {
+  const cat = getCat();
+  const myBreed = (cat.breed || '').toLowerCase().trim();
+  const all = getAllBreeds();
+  const sorted = [...all].sort((a, b) => {
+    const aOwned = a.name.toLowerCase() === myBreed;
+    const bOwned = b.name.toLowerCase() === myBreed;
+    if (aOwned && !bOwned) return -1;
+    if (!aOwned && bOwned) return 1;
+    if (a.isCustom && !b.isCustom) return -1;
+    if (!a.isCustom && b.isCustom) return 1;
+    return a.name.localeCompare(b.name);
+  });
+  const filtered = sorted.filter(b =>
+    !q || b.name.toLowerCase().includes(q) || b.origin.toLowerCase().includes(q) ||
+    b.tags.some(t => t.toLowerCase().includes(q)) || b.desc.toLowerCase().includes(q)
+  );
+  const listEl = document.getElementById('breed-list');
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div>No breeds found</div>';
+    return;
+  }
+  listEl.innerHTML = filtered.map(b => {
+    const owned = b.name.toLowerCase() === myBreed;
+    const thumb = breedThumb(b.name, 54);
+    const likes = b.isCustom ? (b.likes || 0) : ((state.breedLikes && state.breedLikes[b.name]) || 0);
+    const liked = state.breedLiked && state.breedLiked[b.name];
+    return `<div class="breed-card">
+      <div onclick="openBreedDetail('${b.name.replace(/'/g,"\\'")}'')" style="display:flex;gap:12px;align-items:center;flex:1;min-width:0;">
+        ${thumb}
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <div class="breed-name">${b.name}</div>
+            ${owned ? '<span style="background:var(--green);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">Your breed ★</span>' : ''}
+            ${b.isCustom ? '<span style="background:var(--amber-light);color:#854F0B;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">Community</span>' : ''}
+          </div>
+          <div class="breed-origin">${b.origin} · ${b.life}</div>
+          <div class="breed-tags">${b.tags.map((t,i) => `<span class="breed-tag ${i===1?'amber':i===2?'coral':''}">${t}</span>`).join('')}</div>
+        </div>
+      </div>
+      <button onclick="likeBreed('${b.name.replace(/'/g,"\\'")}', event)" style="display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;flex-shrink:0;">
+        <span style="font-size:20px;">${liked ? '❤️' : '🤍'}</span>
+        <span style="font-size:11px;font-weight:600;color:${liked ? 'var(--coral)' : 'var(--text3)'};">${likes || ''}</span>
+      </button>
+    </div>`;
+  }).join('');
+}
+
+// ─── ADD CUSTOM BREED ─────────────────────────────────────────────────────
+function openAddBreedModal() {
+  newBreedPhotoData = null;
+  document.getElementById('nb-name').value = '';
+  document.getElementById('nb-origin').value = '';
+  document.getElementById('nb-life').value = '';
+  document.getElementById('nb-weight').value = '';
+  document.getElementById('nb-coat').value = '';
+  document.getElementById('nb-desc').value = '';
+  document.getElementById('nb-tags').value = '';
+  document.getElementById('nb-photo-preview').innerHTML = '🐱';
+  document.getElementById('add-breed-modal').classList.add('open');
+}
+
+function handleNewBreedPhoto(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    newBreedPhotoData = ev.target.result;
+    document.getElementById('nb-photo-preview').innerHTML = `<img src="${newBreedPhotoData}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveNewBreed() {
+  const name = document.getElementById('nb-name').value.trim();
+  const origin = document.getElementById('nb-origin').value.trim();
+  if (!name || !origin) { showToast('Name and origin required'); return; }
+  // Check against both built-in breeds AND custom breeds
+  const allNames = getAllBreeds().map(b => b.name.toLowerCase());
+  if (allNames.includes(name.toLowerCase())) {
+    const existing = document.getElementById('nb-duplicate-warning');
+    if (existing) existing.remove();
+    const warn = document.createElement('div');
+    warn.id = 'nb-duplicate-warning';
+    warn.style.cssText = 'background:var(--coral-light);color:var(--coral);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:8px;';
+    warn.innerHTML = '<span style="font-size:18px;">⚠️</span><span><strong>' + name + '</strong> already exists in the encyclopedia.</span>';
+    document.getElementById('nb-name').parentElement.parentElement.insertBefore(warn, document.getElementById('nb-name').parentElement);
+    document.getElementById('nb-name').style.borderColor = 'var(--coral)';
+    showToast(name + ' already exists!');
+    return;
+  }
+  const existing = document.getElementById('nb-duplicate-warning');
+  if (existing) existing.remove();
+  const contributor = (document.getElementById('nb-contributor') && document.getElementById('nb-contributor').value.trim()) || 'Anonymous';
+  const tagsRaw = document.getElementById('nb-tags').value.split(',').map(t => t.trim()).filter(Boolean);
+  const newBreed = {
+    name, origin,
+    life: document.getElementById('nb-life').value.trim() || '10–15 yrs',
+    weight: document.getElementById('nb-weight').value.trim() || 'Unknown',
+    size: 'Medium', coat: document.getElementById('nb-coat').value.trim() || 'Short',
+    color: 'Various',
+    desc: document.getElementById('nb-desc').value.trim() || 'A wonderful cat breed.',
+    tags: tagsRaw.length ? tagsRaw.slice(0,3) : ['Custom','Unique'],
+    traits: { affection:3, playfulness:3, grooming:2, social:3, vocal:2 },
+    photo: newBreedPhotoData || '',
+    isCustom: true,
+    likes: 0,
+    contributor,
+    addedAt: Date.now(),
+  };
+  if (!state.customBreeds) state.customBreeds = [];
+  if (newBreedPhotoData) {
+    if (!state.breedPhotos) state.breedPhotos = {};
+    state.breedPhotos[name] = newBreedPhotoData;
+  }
+  state.customBreeds.push(newBreed);
+  // Track contributor stats
+  if (!state.contributors) state.contributors = {};
+  state.contributors[contributor] = (state.contributors[contributor] || 0) + 1;
+  save();
+  closeModal('add-breed-modal');
+  renderBreedList('');
+  showToast(name + ' added! 📖');
+}
+
+function checkBreedDuplicate(val) {
+  const warn = document.getElementById('nb-duplicate-inline');
+  const input = document.getElementById('nb-name');
+  if (!warn || !val.trim()) { if(warn) warn.style.display='none'; if(input) input.style.borderColor=''; return; }
+  const exists = getAllBreeds().some(b => b.name.toLowerCase() === val.trim().toLowerCase());
+  warn.style.display = exists ? 'block' : 'none';
+  if (input) input.style.borderColor = exists ? 'var(--coral)' : '';
+}
+
+function deleteCustomBreed(name) {
+  state.customBreeds = (state.customBreeds || []).filter(b => b.name !== name);
+  if (state.breedPhotos) delete state.breedPhotos[name];
+  save(); switchTab('encyclopedia');
+  showToast('Breed removed');
+}
+
+function openBreedDetail(name) {
+  const breed = getAllBreeds().find(b => b.name === name);
+  if (!breed) return;
+  currentBreedName = name;
+  const cat = getCat();
+  const myBreed = (cat.breed || '').toLowerCase().trim();
+  const owned = breed.name.toLowerCase() === myBreed;
+  state.currentTab = 'breed-detail';
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-breed-detail').classList.add('active');
+  document.getElementById('fab-btn').style.display = 'none';
+  document.getElementById('breed-detail-name').textContent = breed.name;
+  const breedPhoto = getBreedPhoto(name);
+  const heroImg = breedHeroThumb(name);
+  const editBtn = owned
+    ? `<button onclick="triggerBreedPhotoUpload()" style="background:rgba(255,255,255,0.2);border:1.5px solid rgba(255,255,255,0.4);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;color:#fff;font-family:var(--font-body);cursor:pointer;margin-top:8px;">📷 Change photo</button>`
+    : '';
+  const deleteBtn = breed.isCustom
+    ? `<button onclick="deleteCustomBreed('${name.replace(/'/g,"\\'")}');" style="background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;color:#fff;font-family:var(--font-body);cursor:pointer;margin-top:6px;">🗑 Remove breed</button>`
+    : '';
+  const traitBars = Object.entries(breed.traits).map(([key, val]) => `
+    <div class="trait-card">
+      <div class="trait-label">${TRAIT_LABELS[key]}</div>
+      <div class="trait-bar-wrap"><div class="trait-bar" style="width:${val*20}%"></div></div>
+      <div class="trait-val">${['','Low','Low','Medium','High','Very high'][val]}</div>
+    </div>`).join('');
+  document.getElementById('breed-detail-content').innerHTML = `
+    <input type="file" id="breed-photo-input" accept="image/*" style="display:none" onchange="handleBreedPhotoUpload(event)">
+    <div class="detail-hero">
+      ${heroImg}
+      <div class="detail-hero-name">${breed.name}</div>
+      <div class="detail-hero-sub">${breed.origin} · ${breed.life}</div>
+      ${owned ? `<div class="owner-badge-big" style="margin-top:10px;">★ ${cat.name} is a ${breed.name}</div>` : ''}
+      ${editBtn}
+      ${deleteBtn}
+    </div>
+    <div class="fact-card" style="margin-top:14px;">
+      <p style="font-size:14px;color:var(--text2);line-height:1.7;">${breed.desc}</p>
+    </div>
+    <div style="margin-top:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Personality traits</div>
+      <div class="trait-grid">${traitBars}</div>
+    </div>
+    <div style="margin-top:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Breed facts</div>
+      <div class="fact-card">
+        <div class="fact-row"><span class="fact-label">Origin</span><span class="fact-val">${breed.origin}</span></div>
+        <div class="fact-row"><span class="fact-label">Lifespan</span><span class="fact-val">${breed.life}</span></div>
+        <div class="fact-row"><span class="fact-label">Weight</span><span class="fact-val">${breed.weight}</span></div>
+        <div class="fact-row"><span class="fact-label">Size</span><span class="fact-val">${breed.size}</span></div>
+        <div class="fact-row"><span class="fact-label">Coat</span><span class="fact-val">${breed.coat}</span></div>
+        <div class="fact-row"><span class="fact-label">Colours</span><span class="fact-val">${breed.color}</span></div>
+      </div>
+    </div>
+    <div style="height:24px;"></div>`;
+}
+
+function triggerBreedPhotoUpload() {
+  document.getElementById('breed-photo-input').click();
+}
+
+function handleBreedPhotoUpload(e) {
+  const file = e.target.files[0];
+  if (!file || !currentBreedName) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    if (!state.breedPhotos) state.breedPhotos = {};
+    state.breedPhotos[currentBreedName] = ev.target.result;
+    save();
+    openBreedDetail(currentBreedName);
+    showToast('Breed photo saved!');
+  };
+  reader.readAsDataURL(file);
+}
+</script>
+</body>
+</html>
