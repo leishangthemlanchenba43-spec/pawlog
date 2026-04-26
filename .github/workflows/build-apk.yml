@@ -14,7 +14,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -25,16 +25,43 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
-      - name: Init TWA project
+      - name: Create TWA config
         run: |
-          bubblewrap init --manifest https://leishangthemlanchenba43-spec.github.io/pawlog/manifest.json --directory twa-project
-        env:
-          BUBBLEWRAP_ACCEPT_OPTIONAL_DEPS: true
+          mkdir twa-project
+          cat > twa-project/twa-manifest.json << 'EOF'
+          {
+            "packageId": "com.pawlog.app",
+            "host": "leishangthemlanchenba43-spec.github.io",
+            "startUrl": "/pawlog/",
+            "name": "PawLog",
+            "launcherName": "PawLog",
+            "display": "standalone",
+            "themeColor": "#0F6E56",
+            "backgroundColor": "#ffffff",
+            "enableNotifications": false,
+            "shortcuts": [],
+            "iconUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/icon-512.png",
+            "maskableIconUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/icon-512.png",
+            "appVersion": "1",
+            "appVersionCode": 1,
+            "signingKey": {
+              "path": "android.keystore",
+              "alias": "android"
+            },
+            "minSdkVersion": 21,
+            "targetSdkVersion": 34,
+            "orientation": "portrait",
+            "fullScopeUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/",
+            "webManifestUrl": "https://leishangthemlanchenba43-spec.github.io/pawlog/manifest.json"
+          }
+          EOF
 
-      - name: Build APK
+      - name: Build TWA
         run: |
           cd twa-project
           bubblewrap build --skipPwaValidation
+        env:
+          BUBBLEWRAP_ACCEPT_OPTIONAL_DEPS: true
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
