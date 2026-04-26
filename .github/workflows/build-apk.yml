@@ -13,11 +13,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -27,13 +22,26 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
+      - name: Install Node and Bubblewrap
+        run: |
+          node --version
+          npm install -g @bubblewrap/cli@latest
 
-      - name: Create TWA manifest
+      - name: Configure Bubblewrap
+        run: |
+          mkdir -p ~/.bubblewrap
+          cat > ~/.bubblewrap/config.json << 'EOF'
+          {
+            "jdkPath": "/opt/hostedtoolcache/Java_Temurin-Distributions_jdk/17.0.11-9/x64",
+            "androidSdkPath": "/usr/local/lib/android/sdk"
+          }
+          EOF
+
+      - name: Create project files
         run: |
           mkdir -p twa-build
-          cat > twa-build/twa-manifest.json << 'MANIFEST'
+          cd twa-build
+          cat > twa-manifest.json << 'EOF'
           {
             "packageId": "com.pawlog.catcare",
             "host": "leishangthemlanchenba43-spec.github.io",
@@ -69,33 +77,15 @@ jobs:
             "retainedBundles": [],
             "features": {}
           }
-          MANIFEST
-
-      - name: Generate signing key
-        run: |
-          cd twa-build
+          EOF
           keytool -genkey -v \
             -keystore android.keystore \
             -alias android \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass pawlog2024 \
-            -keypass pawlog2024 \
-            -dname "CN=PawLog, OU=Dev, O=PawLog, L=City, S=State, C=US"
-
-      - name: Build Android project
-        run: |
-          cd twa-build
-          bubblewrap build \
-            --manifest ./twa-manifest.json \
-            --keystore ./android.keystore \
-            --keystoreAlias android \
-            --keystorePassword pawlog2024 \
-            --keyPassword pawlog2024
-        env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: pawlog2024
-          BUBBLEWRAP_KEY_PASSWORD: pawlog2024
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass pawlog2024 -keypass pawlog2024 \
+            -dname "CN=PawLog,OU=Dev,O=PawLog,L=City,S=State,C=US"
+          echo "pawlog2024" | bubblewrap update --manifest ./twa-manifest.json
+          printf 'pawlog2024\npawlog2024\n' | bubblewrap build --manifest ./twa-manifest.json
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
