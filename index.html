@@ -9,6 +9,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="PawLog">
 <link rel="manifest" href="manifest.json">
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/pawlog/sw.js');
+  }
+  </script>
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="description" content="The all-in-one cat care tracker. Log meals, moods, vet visits, weight and more.">
 <title>PawLog — Cat Care Tracker</title>
