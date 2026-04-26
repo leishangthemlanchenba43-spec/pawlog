@@ -1,0 +1,69 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Initialize TWA project
+        run: |
+          mkdir twa-build && cd twa-build
+          bubblewrap init \
+            --manifest=https://leishangthemlanchenba43-spec.github.io/pawlog/manifest.json \
+            --directory=. \
+            --packageId=com.pawlog.catcare \
+            --name="PawLog" \
+            --launcherName="PawLog" \
+            --themeColor=#0F6E56 \
+            --backgroundColor=#F5F4F0 \
+            --startUrl="/" \
+            --iconUrl=https://leishangthemlanchenba43-spec.github.io/pawlog/icon-512.png \
+            --maskableIconUrl=https://leishangthemlanchenba43-spec.github.io/pawlog/icon-512.png \
+            --signingKeyPath=./android.keystore \
+            --signingKeyAlias=android \
+            --keyStorePassword=pawlog2024 \
+            --keyPassword=pawlog2024 \
+            --skipPwaValidation
+
+      - name: Build APK
+        run: |
+          cd twa-build
+          bubblewrap build \
+            --signingKeyPath=./android.keystore \
+            --signingKeyAlias=android \
+            --keyStorePassword=pawlog2024 \
+            --keyPassword=pawlog2024
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PawLog-Android
+          path: |
+            twa-build/app-release-signed.apk
+            twa-build/app-release-bundle.aab
+          retention-days: 30
