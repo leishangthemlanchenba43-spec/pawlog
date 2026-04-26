@@ -1,45 +1,188 @@
-name: Build TWA APK
+name: Build PawLog Android (TWA)
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
+    inputs:
+      regenerate_keystore:
+        description: 'Generate NEW keystore? (TRUE only on FIRST run)'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    timeout-minutes: 30
 
-      - name: Setup Java
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Bubblewrap non-interactive
-        run: npm install -g @bubblewrap/cli
-
-      - name: Generate TWA project
-        run: |
-          bubblewrap init \
-            --manifest https://leishangthemlanchenba43-spec.github.io/pawlog/manifest.json \
-            --directory twa-project \
-            --jdkPath $JAVA_HOME \
-            --androidSdkPath $ANDROID_SDK_ROOT
+      - name: Verify required secrets exist
         env:
-          BUBBLEWRAP_ACCEPT_OPTIONAL_DEPS: true
-
-      - name: Build APK
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          cd twa-project
-          ./gradlew assembleRelease
+          if [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::error::Missing KEYSTORE_PASSWORD secret"
+            exit 1
+          fi
+          if [ -z "$KEY_PASSWORD" ]; then
+            echo "::error::Missing KEY_PASSWORD secret"
+            exit 1
+          fi
+          echo "Required secrets present."
+
+      - name: Generate NEW keystore (FIRST RUN ONLY)
+        if: github.event.inputs.regenerate_keystore == 'true'
+        env:
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          mkdir -p workspace
+          keytool -genkeypair \
+            -keystore workspace/android.keystore \
+            -alias android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 36500 \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -keypass "$KEY_PASSWORD" \
+            -dname "CN=Lanchenba, OU=PawLog, O=PawLog, L=Imphal, ST=Manipur, C=IN"
+          echo "::notice::NEW keystore generated."
+          base64 -w 0 workspace/android.keystore > workspace/keystore.base64.txt
+
+      - name: Restore keystore from secret
+        if: github.event.inputs.regenerate_keystore == 'false'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::No KEYSTORE_BASE64 secret. Run with regenerate_keystore=true first."
+            exit 1
+          fi
+          mkdir -p workspace
+          echo "$KEYSTORE_BASE64" | base64 -d > workspace/android.keystore
+          echo "Keystore restored."
+
+      - name: Copy twa-manifest.json into workspace
+        run: |
+          cp twa-manifest.json workspace/twa-manifest.json
+          ls -la workspace/
+
+      - name: Pull Bubblewrap Docker image
+        run: docker pull ghcr.io/googlechromelabs/bubblewrap:latest
+
+      - name: Initialize Bubblewrap project (Docker)
+        run: |
+          docker run --rm \
+            -v "$PWD/workspace:/workspace" \
+            -w /workspace \
+            ghcr.io/googlechromelabs/bubblewrap:latest \
+            init \
+            --manifest "https://leishangthemlanchenba43-spec.github.io/pawlog/manifest.json" \
+            --directory /workspace \
+            --skipPwaValidation || echo "Init completed with warnings"
+          ls -la workspace/
+
+      - name: Override twa-manifest with our config
+        run: |
+          cp twa-manifest.json workspace/twa-manifest.json
+          cat workspace/twa-manifest.json
+
+      - name: Build AAB and APK (Docker)
+        env:
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          docker run --rm \
+            -v "$PWD/workspace:/workspace" \
+            -w /workspace \
+            -e BUBBLEWRAP_KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
+            -e BUBBLEWRAP_KEY_PASSWORD="$KEY_PASSWORD" \
+            ghcr.io/googlechromelabs/bubblewrap:latest \
+            build \
+            --skipPwaValidation \
+            --signingKeyPath ./android.keystore \
+            --signingKeyAlias android
+          ls -la workspace/
+
+      - name: Extract SHA-256 + create assetlinks.json
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          cd workspace
+          echo "=== SHA-256 FINGERPRINT ===" | tee fingerprint.txt
+          keytool -list -v \
+            -keystore android.keystore \
+            -alias android \
+            -storepass "$KEYSTORE_PASSWORD" \
+            2>/dev/null | grep "SHA256:" | tee -a fingerprint.txt
+
+          SHA256=$(keytool -list -v \
+            -keystore android.keystore \
+            -alias android \
+            -storepass "$KEYSTORE_PASSWORD" \
+            2>/dev/null | grep "SHA256:" | head -1 | awk '{print $2}')
+
+          cat > assetlinks.json <<EOF
+          [{
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+              "namespace": "android_app",
+              "package_name": "com.lanchenba.pawlog",
+              "sha256_cert_fingerprints": ["$SHA256"]
+            }
+          }]
+          EOF
+          cat assetlinks.json | tee -a fingerprint.txt
+
+      - name: List build outputs
+        run: |
+          find workspace -maxdepth 3 -type f 2>/dev/null | head -50
+
+      - name: Upload AAB
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pawlog-aab
+          path: workspace/app-release-bundle.aab
+          retention-days: 90
+          if-no-files-found: warn
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: pawlog-apk
-          path: twa-project/app/build/outputs/apk/release/*.apk
+          path: workspace/app-release-signed.apk
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Upload assetlinks + fingerprint
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: assetlinks-and-fingerprint
+          path: |
+            workspace/assetlinks.json
+            workspace/fingerprint.txt
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Upload keystore base64 (FIRST RUN ONLY)
+        if: github.event.inputs.regenerate_keystore == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: keystore-base64-SAVE-AS-SECRET
+          path: workspace/keystore.base64.txt
+          retention-days: 7
