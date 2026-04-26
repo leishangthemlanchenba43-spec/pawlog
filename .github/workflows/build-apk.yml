@@ -59,9 +59,10 @@ jobs:
       - name: Build TWA
         run: |
           cd twa-project
-          bubblewrap build --skipPwaValidation
+          echo "N" | bubblewrap build --skipPwaValidation
         env:
           BUBBLEWRAP_ACCEPT_OPTIONAL_DEPS: true
+          JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
